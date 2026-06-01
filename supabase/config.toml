@@ -1,0 +1,6 @@
+project_id = "otter"
+
+[functions.send-push]
+# Called by a Postgres trigger via pg_net; we use a shared-secret header,
+# not Supabase JWT auth.
+verify_jwt = false

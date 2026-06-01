@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="otter">
+  <!-- Rounded-square background. Pure rose for home-screen pop. -->
+  <rect width="512" height="512" rx="112" ry="112" fill="#d97a8a"/>
+
+  <!-- Otter body shadow behind head, soft and warm -->
+  <ellipse cx="256" cy="430" rx="170" ry="40" fill="#b5616f" opacity="0.35"/>
+
+  <!-- Ears (outer) -->
+  <circle cx="158" cy="170" r="42" fill="#a26b54"/>
+  <circle cx="354" cy="170" r="42" fill="#a26b54"/>
+
+  <!-- Ear inners -->
+  <circle cx="158" cy="170" r="20" fill="#e6a48c"/>
+  <circle cx="354" cy="170" r="20" fill="#e6a48c"/>
+
+  <!-- Head (slightly squished ellipse for round-cute feel) -->
+  <ellipse cx="256" cy="280" rx="172" ry="158" fill="#c98a6e"/>
+
+  <!-- Inner face / muzzle area (lighter cream tone) -->
+  <ellipse cx="256" cy="335" rx="120" ry="108" fill="#fce5d3"/>
+
+  <!-- Cheek blush -->
+  <circle cx="150" cy="335" r="22" fill="#f4a5b0" opacity="0.55"/>
+  <circle cx="362" cy="335" r="22" fill="#f4a5b0" opacity="0.55"/>
+
+  <!-- Eyes -->
+  <circle cx="200" cy="270" r="22" fill="#2b2230"/>
+  <circle cx="312" cy="270" r="22" fill="#2b2230"/>
+  <!-- Eye shines (the cute factor) -->
+  <circle cx="208" cy="262" r="8"  fill="#ffffff"/>
+  <circle cx="194" cy="278" r="3"  fill="#ffffff"/>
+  <circle cx="320" cy="262" r="8"  fill="#ffffff"/>
+  <circle cx="306" cy="278" r="3"  fill="#ffffff"/>
+
+  <!-- Nose (rounded triangle) -->
+  <path d="M 238 322 Q 256 350 274 322 Q 270 314 256 314 Q 242 314 238 322 Z" fill="#2b2230"/>
+
+  <!-- Mouth: two soft curves under the nose -->
+  <path d="M 256 348 Q 256 372 232 368" stroke="#2b2230" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <path d="M 256 348 Q 256 372 280 368" stroke="#2b2230" stroke-width="5" fill="none" stroke-linecap="round"/>
+
+  <!-- Whiskers (subtle) -->
+  <g stroke="#7a4634" stroke-width="3" stroke-linecap="round" opacity="0.75">
+    <line x1="170" y1="346" x2="118" y2="338"/>
+    <line x1="170" y1="358" x2="118" y2="362"/>
+    <line x1="342" y1="346" x2="394" y2="338"/>
+    <line x1="342" y1="358" x2="394" y2="362"/>
+  </g>
+
+  <!-- Tiny heart on the forehead — nods to the couple theme without being saccharine -->
+  <path d="M 256 200
+           c -6 -10 -22 -10 -22 4
+           c 0 10 14 18 22 24
+           c 8 -6 22 -14 22 -24
+           c 0 -14 -16 -14 -22 -4 z"
+        fill="#f4a5b0" opacity="0.85"/>
+</svg>
