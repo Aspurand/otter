@@ -4,6 +4,8 @@ import { fetchMyProfile, fetchCoupleProfiles } from './lib/couples.js'
 import { updateMyProfile, detectTimezone } from './lib/profile.js'
 import { fetchNextReunion } from './lib/events.js'
 import { fetchUnreadFromPartner, markNudgeRead } from './lib/nudges.js'
+import { fetchThrowback } from './lib/memories.js'
+import { markThrowbackSeen } from './lib/profile.js'
 import SignIn from './pages/SignIn.jsx'
 import Onboarding from './pages/Onboarding.jsx'
 import Home from './pages/Home.jsx'
@@ -36,6 +38,7 @@ export default function App() {
   const [chatUnread, setChatUnread] = useState(0)
   const [reunionDays, setReunionDays] = useState(null)
   const [unreadNudges, setUnreadNudges] = useState([])
+  const [throwback, setThrowback] = useState(null)
   const [dark, setDark] = useState(() => {
     try { return localStorage.getItem(DARK_KEY) === '1' } catch { return false }
   })
@@ -230,6 +233,27 @@ export default function App() {
     try { await markNudgeRead(id) } catch (e) { console.error('mark read failed', e) }
   }, [])
 
+  // ────────── today's throwback (Us tab "remember this?" card) ──────────
+  useEffect(() => {
+    if (phase !== 'home' || !profile?.couple_id) return
+    let alive = true
+    fetchThrowback(profile.couple_id)
+      .then((m) => { if (alive) setThrowback(m) })
+      .catch(() => { if (alive) setThrowback(null) })
+    return () => { alive = false }
+  }, [phase, profile?.couple_id])
+
+  // Mark the throwback as seen when the user lands on the Us tab.
+  useEffect(() => {
+    if (tab !== 'us' || !throwback?.id) return
+    if (profile?.last_seen_throwback_id === throwback.id) return
+    markThrowbackSeen(throwback.id).then(() => {
+      onPatchProfileEarly({ last_seen_throwback_id: throwback.id })
+    }).catch(() => {})
+  }, [tab, throwback?.id, profile?.last_seen_throwback_id, onPatchProfileEarly])
+
+  const usHasNew = !!(throwback?.id && profile?.last_seen_throwback_id !== throwback.id)
+
   // ────────── reunion days, for mascot mood ──────────
   useEffect(() => {
     if (phase !== 'home' || !profile?.couple_id) return
@@ -294,7 +318,7 @@ export default function App() {
     if (overlay === 'watch') return <Watch profile={profile} onBack={() => setOverlay(null)} />
     switch (tab) {
       case 'chat':  return <Chat profile={profile} partner={partner} presence={presence} />
-      case 'us':    return <Memories profile={profile} pushToast={pushToast} />
+      case 'us':    return <Memories profile={profile} pushToast={pushToast} throwback={throwback} />
       case 'plans': return <Calendar profile={profile} onOpenWatch={() => setOverlay('watch')} />
       case 'play':  return <Games profile={profile} partner={partner} />
       case 'home':
@@ -334,7 +358,7 @@ export default function App() {
         ))}
       </div>
 
-      {!overlay && <TabBar current={tab} onChange={goTab} chatUnread={chatUnread} />}
+      {!overlay && <TabBar current={tab} onChange={goTab} chatUnread={chatUnread} usHasNew={usHasNew} />}
 
       {showSettings && (
         <SettingsSheet

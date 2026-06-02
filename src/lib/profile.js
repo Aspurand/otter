@@ -12,6 +12,13 @@ export async function updateMyProfile(patch) {
   return Array.isArray(data) ? data[0] : data
 }
 
+// Mark a throwback memory as "seen" by this user, so the Us tab badge clears
+// across the user's other devices too.
+export async function markThrowbackSeen(memoryId) {
+  if (!memoryId) return
+  return updateMyProfile({ last_seen_throwback_id: memoryId })
+}
+
 export function detectTimezone() {
   try {
     return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'

@@ -65,6 +65,18 @@ export async function createMemory(coupleId, { kind, caption = null, happenedAt 
   return Array.isArray(data) ? data[0] : data
 }
 
+// Today's throwback for the couple. Returns the memory row (with a signed_url
+// attached if it's media), or null if there's nothing to show yet.
+export async function fetchThrowback(coupleId) {
+  if (!coupleId) return null
+  const { data, error } = await db.rpc('pick_throwback', { p_couple_id: coupleId })
+  if (error) throw error
+  const row = Array.isArray(data) ? data[0] : data
+  if (!row || !row.id) return null
+  const [withUrl] = await attachSignedUrls([row])
+  return withUrl
+}
+
 export async function deleteMemory(memory) {
   if (memory.media_url) {
     // Best-effort storage cleanup; row deletion is the source of truth.

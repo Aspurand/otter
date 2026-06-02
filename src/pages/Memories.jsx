@@ -7,8 +7,9 @@ import {
   deleteMemory,
 } from '../lib/memories.js'
 import Icon from '../components/Icon.jsx'
+import ThrowbackCard from '../components/ThrowbackCard.jsx'
 
-export default function Memories({ profile, pushToast }) {
+export default function Memories({ profile, pushToast, throwback }) {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -51,6 +52,8 @@ export default function Memories({ profile, pushToast }) {
           <Icon name="plus" size={20} stroke={2.4} />
         </button>
       </header>
+
+      {!adding && throwback && <ThrowbackCard memory={throwback} />}
 
       {adding && <MemoryForm onCancel={() => setAdding(false)} onSubmit={onCreate} />}
       {loading && <p className="hint">loading…</p>}

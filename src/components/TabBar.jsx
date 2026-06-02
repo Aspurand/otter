@@ -10,7 +10,7 @@ const TABS = [
   { key: 'play',  label: 'play',  icon: 'play' },
 ]
 
-export default function TabBar({ current, onChange, chatUnread = 0 }) {
+export default function TabBar({ current, onChange, chatUnread = 0, usHasNew = false }) {
   return (
     <nav className="tabbar" aria-label="primary">
       {TABS.map((tb) => {
@@ -28,6 +28,7 @@ export default function TabBar({ current, onChange, chatUnread = 0 }) {
             <Icon name={iconName} size={23} stroke={2} />
             <span>{tb.label}</span>
             {tb.key === 'chat' && chatUnread > 0 && <span className="badge">{chatUnread}</span>}
+            {tb.key === 'us'   && usHasNew && <span className="dot-badge" aria-label="new throwback" />}
           </button>
         )
       })}
