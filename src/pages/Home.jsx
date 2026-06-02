@@ -49,8 +49,6 @@ export default function Home({
         onEditNickname={onEditNickname}
       />
 
-      <ActivityGrid profile={profile} onPatchProfile={onPatchProfile} />
-
       {/* Unread nudges sit BELOW presence so they can never push the partner clock
           or the reunion countdown off-screen, no matter how many stack up. */}
       <UnreadNudges
@@ -81,6 +79,10 @@ export default function Home({
         partner={partner}
         onCompose={(seed) => setNoteSeed(seed)}
       />
+
+      {/* "What you're up to" tucked at the bottom — not the most important
+          info on the screen, but easy to reach when you do want it. */}
+      <ActivityGrid profile={profile} onPatchProfile={onPatchProfile} />
 
       {noteSeed != null && (
         <LoveNoteSheet

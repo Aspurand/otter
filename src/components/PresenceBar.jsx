@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { formatLocalTime, getLocalHour, tzOffsetLabel, relativeAgo } from '../lib/timezone.js'
 import { updateMyProfile } from '../lib/profile.js'
 import { getActivity, isActivityFresh } from '../lib/activities.js'
+import ActivityIcon from './ActivityIcon.jsx'
 
 const STATUSES = [
   { key: 'free',   label: 'free',   color: '#2f7a4e' },
@@ -86,7 +87,7 @@ export default function PresenceBar({
         <div className="pmeta">{tzOffsetLabel(profile.timezone)} · {myMeta.label}</div>
         {myActivity && (
           <div className="pactivity" aria-label="your current activity">
-            <span aria-hidden>{myActivity.emoji}</span> {myActivity.label}
+            <ActivityIcon name={myActivity.key} size={13} stroke={1.8} /> {myActivity.label}
           </div>
         )}
         <div className="status-row" role="group" aria-label="set my status">
@@ -125,7 +126,7 @@ export default function PresenceBar({
             <div className="pmeta">{tzOffsetLabel(partner.timezone)} · {partnerHint}</div>
             {partnerActivity && (
               <div className="pactivity" aria-label="partner's current activity">
-                <span aria-hidden>{partnerActivity.emoji}</span> {partnerActivity.label}
+                <ActivityIcon name={partnerActivity.key} size={13} stroke={1.8} /> {partnerActivity.label}
                 {partnerActivityAgo && <span className="pactivity-ago"> · {partnerActivityAgo}</span>}
               </div>
             )}

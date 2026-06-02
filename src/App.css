@@ -266,7 +266,7 @@ body {
   color: var(--accent-deep);
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   background: var(--accent-soft);
   padding: 4px 10px;
   border-radius: 999px;
@@ -276,6 +276,7 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.pactivity svg { display: block; flex: 0 0 auto; }
 .pactivity-ago {
   font-weight: 600;
   color: var(--muted);
@@ -311,21 +312,26 @@ body {
 .chip:hover { border-color: color-mix(in oklch, var(--accent) 40%, var(--line)); }
 .chip.on { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
 
-/* ───────── activity grid ("what you're up to") ───────── */
+/* ───────── activity grid ("what you're up to") ─────────
+   Tucked at the bottom of Home, intentionally compact — less visual weight
+   than the presence/countdown/ritual stack above it. */
 
+.activity-card { padding: 13px; }
 .activity-card .card-label {
   display: flex;
   align-items: center;
+  margin-bottom: 8px;
+  font-size: 10.5px;
 }
 .activity-clear {
   margin-left: auto;
   font-family: var(--font);
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 800;
   color: var(--accent);
   background: none;
   border: none;
-  padding: 4px 6px;
+  padding: 2px 4px;
   cursor: pointer;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -334,27 +340,28 @@ body {
 
 .activity-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 7px;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 5px;
 }
 .activity-tile {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 10px 6px 8px;
+  gap: 2px;
+  padding: 7px 3px 5px;
   background: var(--card);
-  border: 1.5px solid var(--line);
-  border-radius: 14px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
   cursor: pointer;
   font-family: var(--font);
-  color: var(--ink);
-  transition: border-color .12s, background .12s, transform .06s;
-  min-height: 70px;
+  color: var(--muted);
+  transition: border-color .12s, background .12s, color .12s, transform .06s;
+  min-height: 54px;
   text-align: center;
 }
 .activity-tile:hover:not(:disabled) {
   border-color: color-mix(in oklch, var(--accent) 40%, var(--line));
+  color: var(--ink);
 }
 .activity-tile:active:not(:disabled) { transform: scale(.97); }
 .activity-tile:disabled { opacity: 0.55; cursor: wait; }
@@ -362,24 +369,24 @@ body {
   border-color: var(--accent);
   background: var(--accent-soft);
   color: var(--accent-deep);
-  box-shadow: var(--shadow-1);
 }
-.activity-emoji {
-  font-size: 22px;
-  line-height: 1;
+.activity-tile svg {
+  display: block;
+  flex: 0 0 auto;
 }
 .activity-label {
-  font-size: 10.5px;
+  font-size: 8.5px;
   font-weight: 700;
-  line-height: 1.15;
+  line-height: 1.1;
   text-transform: lowercase;
   letter-spacing: 0.01em;
   white-space: normal;
+  word-break: break-word;
 }
 
-/* On narrower screens, drop to 3-wide grid */
-@media (max-width: 360px) {
-  .activity-grid { grid-template-columns: repeat(3, 1fr); }
+/* Very narrow phones: drop to 4-wide so labels don't squeeze too hard */
+@media (max-width: 340px) {
+  .activity-grid { grid-template-columns: repeat(4, 1fr); }
 }
 
 /* ───────── reunion countdown ───────── */

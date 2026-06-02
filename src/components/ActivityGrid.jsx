@@ -5,6 +5,7 @@
 import { useState } from 'react'
 import { ACTIVITIES, isActivityFresh } from '../lib/activities.js'
 import { setActivity, clearActivity } from '../lib/profile.js'
+import ActivityIcon from './ActivityIcon.jsx'
 
 export default function ActivityGrid({ profile, onPatchProfile }) {
   const [busy, setBusy] = useState(false)
@@ -56,7 +57,7 @@ export default function ActivityGrid({ profile, onPatchProfile }) {
             aria-pressed={active === a.key}
             title={a.label}
           >
-            <span className="activity-emoji" aria-hidden>{a.emoji}</span>
+            <ActivityIcon name={a.key} size={20} />
             <span className="activity-label">{a.label}</span>
           </button>
         ))}
