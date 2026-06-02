@@ -6,7 +6,7 @@ import { sendNudge } from '../lib/nudges.js'
 import LoveNoteSheet from './LoveNoteSheet.jsx'
 import Icon from './Icon.jsx'
 
-export default function NudgeButton({ profile, partnerName = 'them', pushToast, triggerLoveMood }) {
+export default function NudgeButton({ profile, partner, partnerName = 'them', pushToast, triggerLoveMood }) {
   const [sending, setSending] = useState(false)
   const [pulsing, setPulsing] = useState(false)
   const [showCompose, setShowCompose] = useState(false)
@@ -57,6 +57,8 @@ export default function NudgeButton({ profile, partnerName = 'them', pushToast, 
       {showCompose && (
         <LoveNoteSheet
           coupleId={profile.couple_id}
+          profile={profile}
+          partner={partner}
           onClose={() => setShowCompose(false)}
           onSent={(scheduled) => {
             setShowCompose(false)

@@ -797,6 +797,48 @@ fieldset.field { border: none; padding: 0; margin: 0 0 14px; }
 }
 .checkbox input { width: 18px; height: 18px; accent-color: var(--accent); }
 
+/* tz preview inside the love-note sheet */
+.tz-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin: -8px 0 14px;
+}
+.tz-row {
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+  padding: 4px 0;
+}
+.tz-row + .tz-row { border-top: 1px dashed var(--line); }
+.tz-side {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: lowercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.tz-row.partner .tz-side { color: var(--accent); }
+.tz-when {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  min-width: 0;
+}
+.tz-where {
+  font-size: 11px;
+  color: var(--faint);
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+}
+
 /* love chip grid in settings */
 .love-grid { display: flex; flex-wrap: wrap; gap: 7px; }
 .love-chip {

@@ -48,6 +48,7 @@ export default function Home({
 
       <NudgeButton
         profile={profile}
+        partner={partner}
         partnerName={partnerName}
         pushToast={pushToast}
         triggerLoveMood={triggerLoveMood}
@@ -68,6 +69,8 @@ export default function Home({
       {noteSeed != null && (
         <LoveNoteSheet
           coupleId={profile.couple_id}
+          profile={profile}
+          partner={partner}
           initialBody={typeof noteSeed === 'string' ? noteSeed : ''}
           onClose={() => setNoteSeed(null)}
           onSent={(scheduled) => {

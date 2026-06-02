@@ -2,20 +2,32 @@
 // Immediate notes use kind='thinking_of_you'; scheduled ones use kind='love_note'
 // with delivered=false until the pg_cron job flips it.
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { sendNudge } from '../lib/nudges.js'
+import { formatInTimezone, tzNickname, tzOffsetLabel } from '../lib/timezone.js'
 
 function toLocalInput(d) {
   const pad = (n) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
-export default function LoveNoteSheet({ coupleId, onClose, onSent, initialBody = '' }) {
+export default function LoveNoteSheet({ coupleId, onClose, onSent, initialBody = '', profile, partner }) {
   const [body, setBody] = useState(initialBody)
   const [later, setLater] = useState(false)
   const [when, setWhen] = useState(() => toLocalInput(new Date(Date.now() + 6 * 3_600_000)))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
+
+  // Same instant, two perspectives.
+  const previews = useMemo(() => {
+    if (!when) return null
+    const d = new Date(when) // datetime-local is interpreted in the BROWSER's local tz
+    if (Number.isNaN(d.getTime())) return null
+    return {
+      mine:    profile?.timezone ? { label: formatInTimezone(profile.timezone, d), tz: tzNickname(profile.timezone), off: tzOffsetLabel(profile.timezone) } : null,
+      theirs:  partner?.timezone ? { label: formatInTimezone(partner.timezone, d), tz: tzNickname(partner.timezone), off: tzOffsetLabel(partner.timezone) } : null,
+    }
+  }, [when, profile, partner])
 
   async function onSubmit(e) {
     e.preventDefault()
@@ -52,10 +64,30 @@ export default function LoveNoteSheet({ coupleId, onClose, onSent, initialBody =
           <span>deliver later — surprise them at a perfect moment</span>
         </label>
         {later && (
-          <div className="field">
-            <label>arrives at</label>
-            <input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} required />
-          </div>
+          <>
+            <div className="field">
+              <label>arrives at</label>
+              <input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} required />
+            </div>
+            {previews && (previews.mine || previews.theirs) && (
+              <div className="tz-preview">
+                {previews.mine && (
+                  <div className="tz-row">
+                    <span className="tz-side">you</span>
+                    <span className="tz-when">{previews.mine.label}</span>
+                    <span className="tz-where">{previews.mine.tz} · {previews.mine.off}</span>
+                  </div>
+                )}
+                {previews.theirs && (
+                  <div className="tz-row partner">
+                    <span className="tz-side">{partner?.display_name ?? 'them'}</span>
+                    <span className="tz-when">{previews.theirs.label}</span>
+                    <span className="tz-where">{previews.theirs.tz} · {previews.theirs.off}</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </>
         )}
         <button className="btn primary full" type="button" disabled={!body.trim() || busy} onClick={onSubmit}>
           {busy ? 'sending…' : (later ? 'schedule it 💌' : 'send it ♥')}

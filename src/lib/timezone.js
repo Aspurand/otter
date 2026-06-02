@@ -39,6 +39,31 @@ export function tzOffsetLabel(tz) {
   }
 }
 
+// Friendly nickname for an IANA timezone — "Los_Angeles" → "Los Angeles".
+export function tzNickname(tz) {
+  if (!tz) return ''
+  const parts = String(tz).split('/')
+  return (parts[parts.length - 1] || tz).replace(/_/g, ' ')
+}
+
+// Full datetime formatted in a specific tz, e.g. "Mon Jun 2, 11:00 PM".
+// Returned with no tz label so the caller can pair it with tzNickname/tzOffsetLabel as desired.
+export function formatInTimezone(tz, date) {
+  try {
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone: tz,
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    }).format(date instanceof Date ? date : new Date(date))
+  } catch {
+    return '—'
+  }
+}
+
 // "5 min ago" / "3h ago" / "2d ago" — for the partner-offline case.
 export function relativeAgo(iso) {
   if (!iso) return null
