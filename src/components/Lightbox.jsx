@@ -24,7 +24,14 @@ export default function Lightbox({ src, alt = '', filename = 'memory', onClose }
     setBusy(true)
     try {
       const res = await fetch(src)
+      // Signed URLs expire — without this check we'd quietly "save" a 4xx
+      // XML body as a .bin file. fetch() doesn't throw on 4xx, so the older
+      // try/catch alone never noticed.
+      if (!res.ok) throw new Error(`expired (${res.status})`)
       const blob = await res.blob()
+      if (!blob.type.startsWith('image/') && !blob.type.startsWith('audio/')) {
+        throw new Error('unexpected response')
+      }
       const ext = (blob.type.split('/')[1] || 'jpg').split(';')[0]
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')

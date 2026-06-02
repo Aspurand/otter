@@ -25,7 +25,8 @@ function isOnThisDay(iso) {
   if (!iso) return false
   const d = new Date(iso)
   const now = new Date()
-  return d.getUTCMonth() === now.getUTCMonth() && d.getUTCDate() === now.getUTCDate()
+  // Compare in the viewer's LOCAL tz so the label matches what the RPC matched on.
+  return d.getMonth() === now.getMonth() && d.getDate() === now.getDate()
 }
 
 export default function ThrowbackCard({ memory, onZoom }) {

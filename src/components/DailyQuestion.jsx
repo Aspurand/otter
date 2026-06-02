@@ -84,7 +84,7 @@ export default function DailyQuestion({ profile, partner, partnerName }) {
             rows={4}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder={`your answer (${partner?.display_name ?? 'they'} can't see it until you both reply)…`}
+            placeholder={`your answer (${them} can't see it until you both reply)…`}
           />
           <button className="btn primary full" type="button" disabled={submitting || !draft.trim()} onClick={onSubmit}>
             {submitting ? 'sending…' : 'send my answer'}

@@ -31,8 +31,17 @@ export async function setActivity(activityKey, status = null) {
   return updateMyProfile(patch)
 }
 
+// Clearing an activity also resets the 4-state status to 'free'. Otherwise
+// users who picked 'bedtime' (auto → asleep) then tapped clear get stranded as
+// 'asleep' forever, and the mascot keeps showing sleepy. The whole point of
+// "clearing" is "I'm available again."
 export async function clearActivity() {
-  return updateMyProfile({ activity: null, activity_at: null })
+  return updateMyProfile({
+    activity: null,
+    activity_at: null,
+    status: 'free',
+    last_active: new Date().toISOString(),
+  })
 }
 
 // Set/clear the nickname YOU use for your partner. Stored on YOUR profile,

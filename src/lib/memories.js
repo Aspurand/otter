@@ -67,9 +67,17 @@ export async function createMemory(coupleId, { kind, caption = null, happenedAt 
 
 // Today's throwback for the couple. Returns the memory row (with a signed_url
 // attached if it's media), or null if there's nothing to show yet.
+// `p_today` is sent so the RPC can match "on this day" against the viewer's
+// LOCAL date — UTC matching gets the day wrong by up to 24h for non-UTC users.
 export async function fetchThrowback(coupleId) {
   if (!coupleId) return null
-  const { data, error } = await db.rpc('pick_throwback', { p_couple_id: coupleId })
+  const d = new Date()
+  const pad = (n) => String(n).padStart(2, '0')
+  const localISO = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+  const { data, error } = await db.rpc('pick_throwback', {
+    p_couple_id: coupleId,
+    p_today: localISO,
+  })
   if (error) throw error
   const row = Array.isArray(data) ? data[0] : data
   if (!row || !row.id) return null

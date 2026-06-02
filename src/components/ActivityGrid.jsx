@@ -15,9 +15,14 @@ export default function ActivityGrid({ profile, onPatchProfile }) {
     setBusy(true)
     try {
       if (active === a.key) {
-        // tapping the currently-active tile clears it
+        // tapping the currently-active tile clears it; also restores status to 'free'
         const updated = await clearActivity()
-        onPatchProfile({ activity: null, activity_at: null, ...updated })
+        onPatchProfile({
+          activity: null,
+          activity_at: null,
+          status: 'free',
+          ...updated,
+        })
       } else {
         const updated = await setActivity(a.key, a.status)
         onPatchProfile({

@@ -9,14 +9,19 @@ import {
 import Icon from '../components/Icon.jsx'
 import ThrowbackCard from '../components/ThrowbackCard.jsx'
 import Lightbox from '../components/Lightbox.jsx'
+import { useWakeKey } from '../lib/wake.js'
 
 export default function Memories({ profile, pushToast, throwback }) {
+  const wakeKey = useWakeKey()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [adding, setAdding] = useState(false)
   const [zoom, setZoom] = useState(null) // { src, alt, filename } | null
 
+  // Signed URLs expire after 4h. wakeKey in deps means a phone that's been
+  // backgrounded long enough for URLs to go stale re-fetches them on wake,
+  // so the gallery doesn't turn into a wall of broken images.
   useEffect(() => {
     let alive = true
     fetchMemories(profile.couple_id)
@@ -24,7 +29,7 @@ export default function Memories({ profile, pushToast, throwback }) {
       .then((rows) => { if (alive) { setItems(rows); setLoading(false) } })
       .catch((e) => { if (alive) { setError(e.message); setLoading(false) } })
     return () => { alive = false }
-  }, [profile.couple_id])
+  }, [profile.couple_id, wakeKey])
 
   async function onCreate({ kind, file, caption, happenedAt }) {
     let mediaUrl = null

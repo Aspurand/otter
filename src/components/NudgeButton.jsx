@@ -59,6 +59,7 @@ export default function NudgeButton({ profile, partner, partnerName = 'them', pu
           coupleId={profile.couple_id}
           profile={profile}
           partner={partner}
+          partnerName={partnerName}
           onClose={() => setShowCompose(false)}
           onSent={(scheduled) => {
             setShowCompose(false)

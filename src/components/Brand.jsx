@@ -13,7 +13,7 @@ export default function Brand({ tagline, mood = 'happy', size = 50, onSettings, 
       </div>
       <div className="spacer" />
       {showDays && (
-        <div className="head-countdown" aria-label={`${countdownDays} days to reunion`}>
+        <div className="head-countdown" aria-label={`${countdownDays} ${countdownDays === 1 ? 'day' : 'days'} to reunion`}>
           <strong>{countdownDays}</strong>
           <span>{countdownDays === 1 ? 'day' : 'days'}</span>
         </div>

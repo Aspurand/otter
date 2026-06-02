@@ -87,6 +87,7 @@ export default function Home({
           coupleId={profile.couple_id}
           profile={profile}
           partner={partner}
+          partnerName={partnerName}
           initialBody={typeof noteSeed === 'string' ? noteSeed : ''}
           onClose={() => setNoteSeed(null)}
           onSent={(scheduled) => {

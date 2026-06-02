@@ -11,7 +11,7 @@ function toLocalInput(d) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
-export default function LoveNoteSheet({ coupleId, onClose, onSent, initialBody = '', profile, partner }) {
+export default function LoveNoteSheet({ coupleId, onClose, onSent, initialBody = '', profile, partner, partnerName }) {
   const [body, setBody] = useState(initialBody)
   const [later, setLater] = useState(false)
   const [when, setWhen] = useState(() => toLocalInput(new Date(Date.now() + 6 * 3_600_000)))
@@ -80,7 +80,7 @@ export default function LoveNoteSheet({ coupleId, onClose, onSent, initialBody =
                 )}
                 {previews.theirs && (
                   <div className="tz-row partner">
-                    <span className="tz-side">{partner?.display_name ?? 'them'}</span>
+                    <span className="tz-side">{partnerName ?? partner?.display_name ?? 'them'}</span>
                     <span className="tz-when">{previews.theirs.label}</span>
                     <span className="tz-where">{previews.theirs.tz} · {previews.theirs.off}</span>
                   </div>

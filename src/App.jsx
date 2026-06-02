@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from './lib/supabase.js'
+import { db } from './lib/db.js'
 import { fetchMyProfile, fetchCoupleProfiles } from './lib/couples.js'
 import { updateMyProfile, detectTimezone } from './lib/profile.js'
 import { fetchNextReunion } from './lib/events.js'
@@ -138,9 +139,29 @@ export default function App() {
     const ch = channelRef.current
     if (!ch || !profile) return
     ch.track({ id: profile.id, status: profile.status, at: Date.now() }).catch(() => {})
-  }, [profile?.status, profile?.id, profile])
+    // Note: 'profile' itself isn't in deps. We only re-track when status/id
+    // change — bumping on every profile field edit (nickname, activity_at, …)
+    // would create gratuitous presence broadcasts.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.status, profile?.id])
 
-  // ────────── chat unread badge (count incoming messages while tab != chat) ──────────
+  // ────────── chat unread badge (initial seed + realtime increment) ──────────
+  // Seed from the DB on home entry so messages that arrived while the app was
+  // closed are reflected in the tab badge immediately. Without this, opening
+  // straight to Home shows "0 unread" until the user visits Chat.
+  useEffect(() => {
+    if (phase !== 'home' || !profile?.couple_id || !partner?.id || tab === 'chat') return
+    let alive = true
+    db.select('messages', {
+      match: { couple_id: profile.couple_id, sender_id: partner.id, read_at: null },
+      order: { column: 'created_at', ascending: false },
+      limit: 100,
+    }).then(({ data }) => {
+      if (alive && Array.isArray(data)) setChatUnread(data.length)
+    }).catch(() => {})
+    return () => { alive = false }
+  }, [phase, profile?.couple_id, partner?.id, tab, wakeKey])
+
   useEffect(() => {
     if (phase !== 'home' || !profile?.couple_id) return
     const ch = supabase
