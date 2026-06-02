@@ -150,6 +150,35 @@ body {
 .icon-btn:hover { color: var(--accent); border-color: color-mix(in oklch, var(--accent) 40%, var(--line)); }
 .icon-btn:active { transform: scale(.92); }
 
+/* Always-visible "Xd to reunion" badge in the brand header */
+.head-countdown {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 6px 11px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, color-mix(in oklch, var(--accent) 14%, var(--card)) 0%, var(--accent-soft) 100%);
+  border: 1px solid color-mix(in oklch, var(--accent) 40%, var(--line));
+  color: var(--accent-deep);
+  flex: 0 0 auto;
+  box-shadow: var(--shadow-1);
+  font-variant-numeric: tabular-nums;
+}
+.head-countdown strong {
+  font-size: 17px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+.head-countdown span {
+  font-size: 10.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent-deep);
+  opacity: 0.78;
+}
+
 /* ───────── cards ───────── */
 
 .card {
@@ -252,7 +281,9 @@ body {
 }
 .cd-num { display: flex; flex-direction: column; }
 .cd-num strong {
-  font-size: 46px; font-weight: 900; letter-spacing: -0.04em; line-height: .9;
+  /* responsive — never overflows narrow phones, never absurd on tablets */
+  font-size: clamp(34px, 12vw, 46px);
+  font-weight: 900; letter-spacing: -0.04em; line-height: .9;
 }
 .cd-num span {
   font-size: 11px; text-transform: uppercase; letter-spacing: 0.16em;
@@ -665,6 +696,11 @@ body {
   width: 100%; display: block; aspect-ratio: 4/3; background: var(--bg-2);
   object-fit: cover;
 }
+.mem-photo-btn, .throwback-photo-btn {
+  display: block; width: 100%; padding: 0; border: none; background: none;
+  cursor: zoom-in; font: inherit; color: inherit; text-align: left;
+}
+.mem-photo-btn:active, .throwback-photo-btn:active { opacity: 0.92; }
 .mem-audio {
   width: 100%; padding: 12px 14px 0; background: transparent;
 }
@@ -978,6 +1014,52 @@ fieldset.field { border: none; padding: 0; margin: 0 0 14px; }
 .watch-player { display: flex; flex-direction: column; gap: 8px; }
 .watch-player video {
   width: 100%; background: #000; border-radius: var(--radius); box-shadow: var(--shadow-1);
+}
+
+/* ───────── lightbox (image viewer) ───────── */
+
+.lightbox {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(0, 0, 0, 0.94);
+  display: flex; align-items: center; justify-content: center;
+  padding: calc(env(safe-area-inset-top) + 12px) 14px calc(env(safe-area-inset-bottom) + 88px);
+  animation: fade .15s ease-out;
+}
+.lightbox-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+  cursor: zoom-out;
+}
+.lightbox-actions {
+  position: absolute;
+  left: 0; right: 0;
+  bottom: calc(env(safe-area-inset-bottom) + 22px);
+  display: flex; justify-content: center; gap: 10px;
+}
+.lightbox-btn {
+  background: rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(14px) saturate(180%);
+  -webkit-backdrop-filter: blur(14px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #fff;
+  font-family: var(--font); font-size: 14px; font-weight: 700;
+  padding: 11px 20px; border-radius: 999px;
+  cursor: pointer; transition: background .12s;
+}
+.lightbox-btn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.24); }
+.lightbox-btn:disabled { opacity: 0.6; }
+.lightbox-close {
+  position: absolute; top: calc(env(safe-area-inset-top) + 14px); right: 14px;
+  width: 38px; height: 38px; border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #fff; font-size: 24px; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
 }
 
 /* screen enter animation */

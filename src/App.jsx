@@ -269,6 +269,53 @@ export default function App() {
     return () => { alive = false }
   }, [phase, profile?.couple_id, tab])
 
+  // ────────── visibility recovery ──────────
+  // iOS PWAs and Android Chrome sometimes drop the WebSocket and stop updating
+  // data after long idle. When the tab becomes visible again, refresh the session
+  // (token may have expired during background), re-fetch the key data, and
+  // bounce the realtime client so all channels reconnect.
+  useEffect(() => {
+    if (phase !== 'home' || !profile?.couple_id) return
+    let lastBumpAt = 0
+    function onVisible() {
+      if (document.visibilityState !== 'visible') return
+      const now = Date.now()
+      if (now - lastBumpAt < 2_000) return // debounce; visibilitychange can double-fire
+      lastBumpAt = now
+      ;(async () => {
+        try { await supabase.auth.refreshSession() } catch { /* fine if it errors */ }
+        try { await refreshProfile() } catch { /* non-fatal */ }
+        // Re-fetch partner so their fields (timezone, etc.) are current.
+        try {
+          const people = await fetchCoupleProfiles(profile.couple_id)
+          setPartner(people.find((p) => p.id !== profile.id) ?? null)
+        } catch { /* non-fatal */ }
+        // Re-fetch unread nudges in case we missed realtime events.
+        if (partner?.id) {
+          try {
+            const rows = await fetchUnreadFromPartner(profile.couple_id, partner.id)
+            setUnreadNudges((prev) => {
+              const seen = new Set(prev.map((x) => x.id))
+              const merged = [...prev]
+              for (const r of rows) if (!seen.has(r.id)) merged.push(r)
+              merged.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+              return merged
+            })
+          } catch { /* non-fatal */ }
+        }
+        // Force the realtime client to reconnect any dropped channels.
+        try { supabase.realtime.disconnect() } catch { /* ignore */ }
+        try { supabase.realtime.connect() } catch { /* ignore */ }
+      })()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', onVisible)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', onVisible)
+    }
+  }, [phase, profile?.couple_id, profile?.id, partner?.id, refreshProfile])
+
   // ────────── persist dark mode ──────────
   useEffect(() => {
     try { localStorage.setItem(DARK_KEY, dark ? '1' : '0') } catch { /* ignore */ }
@@ -329,6 +376,7 @@ export default function App() {
             partner={partner}
             presence={presence}
             mascotMood={mascotMood}
+            reunionDays={reunionDays}
             unreadNudges={unreadNudges}
             onDismissNudge={dismissUnreadNudge}
             onPatchProfile={onPatchProfile}

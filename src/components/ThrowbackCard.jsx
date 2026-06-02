@@ -28,7 +28,7 @@ function isOnThisDay(iso) {
   return d.getUTCMonth() === now.getUTCMonth() && d.getUTCDate() === now.getUTCDate()
 }
 
-export default function ThrowbackCard({ memory }) {
+export default function ThrowbackCard({ memory, onZoom }) {
   if (!memory) return null
 
   const whenIso = memory.happened_at ?? memory.created_at
@@ -42,7 +42,14 @@ export default function ThrowbackCard({ memory }) {
     <section className="throwback">
       <p className="throwback-pill">{header}</p>
       {memory.kind === 'photo' && memory.signed_url && (
-        <img className="throwback-photo" src={memory.signed_url} alt={memory.caption ?? ''} loading="lazy" />
+        <button
+          className="throwback-photo-btn"
+          type="button"
+          onClick={() => onZoom?.(memory.signed_url, memory.caption ?? '')}
+          aria-label="view photo full screen"
+        >
+          <img className="throwback-photo" src={memory.signed_url} alt={memory.caption ?? ''} loading="lazy" />
+        </button>
       )}
       {memory.kind === 'voice' && memory.signed_url && (
         <audio className="throwback-audio" controls src={memory.signed_url} />

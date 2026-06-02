@@ -13,6 +13,7 @@ export default function Home({
   partner,
   presence,
   mascotMood = 'happy',
+  reunionDays = null,
   unreadNudges = [],
   onDismissNudge,
   onPatchProfile,
@@ -29,12 +30,11 @@ export default function Home({
 
   return (
     <div className="otter-scroll screen-enter">
-      <Brand tagline={greeting} mood={mascotMood} onSettings={onOpenSettings} />
-
-      <UnreadNudges
-        items={unreadNudges}
-        partnerName={partnerName}
-        onDismiss={onDismissNudge}
+      <Brand
+        tagline={greeting}
+        mood={mascotMood}
+        onSettings={onOpenSettings}
+        countdownDays={reunionDays}
       />
 
       <PresenceBar
@@ -42,6 +42,14 @@ export default function Home({
         partner={partner}
         presence={presence}
         onStatusChange={(s) => onPatchProfile({ status: s, last_active: new Date().toISOString() })}
+      />
+
+      {/* Unread nudges sit BELOW presence so they can never push the partner clock
+          or the reunion countdown off-screen, no matter how many stack up. */}
+      <UnreadNudges
+        items={unreadNudges}
+        partnerName={partnerName}
+        onDismiss={onDismissNudge}
       />
 
       <ReunionCountdown coupleId={profile.couple_id} />

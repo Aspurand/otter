@@ -8,12 +8,14 @@ import {
 } from '../lib/memories.js'
 import Icon from '../components/Icon.jsx'
 import ThrowbackCard from '../components/ThrowbackCard.jsx'
+import Lightbox from '../components/Lightbox.jsx'
 
 export default function Memories({ profile, pushToast, throwback }) {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [adding, setAdding] = useState(false)
+  const [zoom, setZoom] = useState(null) // { src, alt, filename } | null
 
   useEffect(() => {
     let alive = true
@@ -53,7 +55,12 @@ export default function Memories({ profile, pushToast, throwback }) {
         </button>
       </header>
 
-      {!adding && throwback && <ThrowbackCard memory={throwback} />}
+      {!adding && throwback && (
+        <ThrowbackCard
+          memory={throwback}
+          onZoom={(src, alt) => setZoom({ src, alt, filename: `otter-throwback-${throwback.id}` })}
+        />
+      )}
 
       {adding && <MemoryForm onCancel={() => setAdding(false)} onSubmit={onCreate} />}
       {loading && <p className="hint">loading…</p>}
@@ -71,22 +78,42 @@ export default function Memories({ profile, pushToast, throwback }) {
           <ul className="mem-list">
             {month.map((m) => (
               <li key={m.id}>
-                <MemoryCard memory={m} onDelete={() => { if (confirm('delete this memory?')) onDelete(m) }} />
+                <MemoryCard
+                  memory={m}
+                  onDelete={() => { if (confirm('delete this memory?')) onDelete(m) }}
+                  onZoom={(src, alt) => setZoom({ src, alt, filename: `otter-memory-${m.id}` })}
+                />
               </li>
             ))}
           </ul>
         </section>
       ))}
+
+      {zoom && (
+        <Lightbox
+          src={zoom.src}
+          alt={zoom.alt}
+          filename={zoom.filename}
+          onClose={() => setZoom(null)}
+        />
+      )}
     </div>
   )
 }
 
-function MemoryCard({ memory, onDelete }) {
+function MemoryCard({ memory, onDelete, onZoom }) {
   const isNote = memory.kind === 'note'
   return (
     <article className={`mem-card ${isNote ? 'mem-note' : ''}`}>
       {memory.kind === 'photo' && memory.signed_url && (
-        <img className="mem-photo" src={memory.signed_url} alt={memory.caption ?? ''} loading="lazy" />
+        <button
+          className="mem-photo-btn"
+          type="button"
+          onClick={() => onZoom?.(memory.signed_url, memory.caption ?? '')}
+          aria-label="view photo full screen"
+        >
+          <img className="mem-photo" src={memory.signed_url} alt={memory.caption ?? ''} loading="lazy" />
+        </button>
       )}
       {memory.kind === 'voice' && memory.signed_url && (
         <audio className="mem-audio" controls src={memory.signed_url} />
