@@ -10,16 +10,32 @@ export const EVENT_TYPES = [
   { key: 'anniversary', label: 'anniversary' },
 ]
 
+// Implicit reunion duration when ends_at isn't set — used to know when an
+// undated reunion should be considered "over" so we can advance to the next.
+const REUNION_GRACE_MS = 24 * 60 * 60 * 1000
+
+// The next reunion the countdown should show — either upcoming OR currently
+// happening (started but not yet ended). Server filter is lenient (events
+// that started in the last 7 days); the client picks the first whose
+// effective end (ends_at, or starts_at + 24h grace) is still in the future.
 export async function fetchNextReunion(coupleId) {
   if (!coupleId) return null
+  const cutoff = new Date(Date.now() - 7 * 24 * 3_600_000).toISOString()
   const { data, error } = await db.select('events', {
     match: { couple_id: coupleId, is_reunion: true },
-    gt: { starts_at: new Date().toISOString() },
+    gt: { starts_at: cutoff },
     order: { column: 'starts_at', ascending: true },
-    limit: 1,
+    limit: 10,
   })
   if (error) throw error
-  return Array.isArray(data) ? data[0] ?? null : data
+  const now = Date.now()
+  const rows = data ?? []
+  for (const ev of rows) {
+    const startsAt = new Date(ev.starts_at).getTime()
+    const endsAt = ev.ends_at ? new Date(ev.ends_at).getTime() : startsAt + REUNION_GRACE_MS
+    if (endsAt > now) return ev
+  }
+  return null
 }
 
 // Future events (and currently happening), oldest -> newest.

@@ -1,10 +1,19 @@
 // Reunion countdown — rose gradient card with big d/h/m numbers.
-// Inline "set the next one" form when none is scheduled.
+// Hybrid tick (1s when ≤ 1h, 60s otherwise). Handles three phases:
+//   1) upcoming → live countdown
+//   2) happening now (started, not yet ended) → celebratory state, no numbers
+//   3) ended → auto-refetch the next reunion in queue, so the card never
+//      goes stale or shows "nothing scheduled" while a real reunion is
+//      next in line.
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { fetchNextReunion, addReunion } from '../lib/events.js'
+import { useWakeKey } from '../lib/wake.js'
+
+const REUNION_GRACE_MS = 24 * 60 * 60 * 1000
 
 export default function ReunionCountdown({ coupleId }) {
+  const wakeKey = useWakeKey()
   const [reunion, setReunion] = useState(null)
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
@@ -14,32 +23,37 @@ export default function ReunionCountdown({ coupleId }) {
   const [error, setError] = useState(null)
   const [now, setNow] = useState(() => new Date())
 
+  const refetch = useCallback(() => {
+    if (!coupleId) return
+    fetchNextReunion(coupleId)
+      .then((r) => { setReunion(r); setLoading(false) })
+      .catch((e) => { setError(e.message); setLoading(false) })
+  }, [coupleId])
+
   useEffect(() => {
     let alive = true
     fetchNextReunion(coupleId)
       .then((r) => { if (alive) { setReunion(r); setLoading(false) } })
       .catch((e) => { if (alive) { setError(e.message); setLoading(false) } })
     return () => { alive = false }
-  }, [coupleId])
+  }, [coupleId, wakeKey])
 
-  // Hybrid tick: 1s when ≤ 1 hour to go (so the final stretch shows live seconds),
-  // 60s otherwise (cheap battery cost). Also pauses when the tab is hidden so a
-  // backgrounded PWA isn't running timers for nothing — visibilitychange in App.jsx
-  // re-fetches data the moment the tab comes back, so we won't show stale values.
+  // Tick cadence: 1s in the final hour, 60s otherwise. Pauses when the tab is hidden
+  // to save battery — App.jsx's wake handler will trigger refetch anyway.
   useEffect(() => {
     if (!reunion) return
     let timer = null
     function plan() {
       clearInterval(timer)
       if (document.visibilityState !== 'visible') return
-      const ms = new Date(reunion.starts_at).getTime() - Date.now()
-      if (ms <= 0) return
+      const startsAt = new Date(reunion.starts_at).getTime()
+      const ms = startsAt - Date.now()
+      if (ms <= 0) return // happening-now: re-fetch scheduler below handles it
       const interval = ms <= 3_600_000 ? 1_000 : 60_000
-      setNow(new Date()) // immediate refresh on (re)plan
+      setNow(new Date())
       timer = setInterval(() => {
         setNow(new Date())
-        // If we just crossed the 1h boundary, re-plan to switch cadences.
-        const remaining = new Date(reunion.starts_at).getTime() - Date.now()
+        const remaining = startsAt - Date.now()
         const wantInterval = remaining <= 3_600_000 ? 1_000 : 60_000
         if (wantInterval !== interval) plan()
       }, interval)
@@ -52,10 +66,31 @@ export default function ReunionCountdown({ coupleId }) {
     }
   }, [reunion])
 
+  // When the active reunion ends, auto-refetch the next one in queue.
+  useEffect(() => {
+    if (!reunion) return
+    const startsAt = new Date(reunion.starts_at).getTime()
+    const endsAt = reunion.ends_at ? new Date(reunion.ends_at).getTime() : startsAt + REUNION_GRACE_MS
+    const ms = endsAt - Date.now()
+    if (ms <= 0) {
+      // Already over — refetch right away (will return next reunion or null).
+      refetch()
+      return
+    }
+    // Cap setTimeout to ~24 days (signed 32-bit limit) to avoid overflow.
+    const safeMs = Math.min(ms + 1_000, 2_000_000_000)
+    const id = setTimeout(refetch, safeMs)
+    return () => clearTimeout(id)
+  }, [reunion?.id, reunion?.ends_at, reunion?.starts_at, refetch, reunion])
+
   const breakdown = useMemo(() => {
     if (!reunion) return null
-    const ms = new Date(reunion.starts_at).getTime() - now.getTime()
-    if (ms <= 0) return { past: true }
+    const startsAt = new Date(reunion.starts_at).getTime()
+    const endsAt = reunion.ends_at ? new Date(reunion.ends_at).getTime() : startsAt + REUNION_GRACE_MS
+    const t = now.getTime()
+    if (t >= endsAt) return { ended: true }
+    if (t >= startsAt) return { happeningNow: true }
+    const ms = startsAt - t
     const days  = Math.floor(ms / 86_400_000)
     const hours = Math.floor((ms % 86_400_000) / 3_600_000)
     const mins  = Math.floor((ms % 3_600_000) / 60_000)
@@ -84,7 +119,19 @@ export default function ReunionCountdown({ coupleId }) {
     )
   }
 
-  if (reunion && !breakdown?.past) {
+  // Phase 2: started but not ended → "happening now"
+  if (reunion && breakdown?.happeningNow) {
+    return (
+      <section className="card reunion">
+        <p className="card-label"><span className="dot" /> happening now</p>
+        <p className="reunion-title" style={{ marginTop: 4 }}>{reunion.title} ✨</p>
+        <p className="reunion-when">soak it in.</p>
+      </section>
+    )
+  }
+
+  // Phase 1: upcoming → live countdown
+  if (reunion && !breakdown?.ended) {
     const soon = breakdown.days <= 7
     return (
       <section className="card reunion">
@@ -115,6 +162,7 @@ export default function ReunionCountdown({ coupleId }) {
     )
   }
 
+  // Phase 3 / empty: editing or no reunion
   if (editing) {
     return (
       <section className="card">
