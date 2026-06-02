@@ -8,7 +8,7 @@ import { relativeAgo } from '../lib/timezone.js'
 import { useWakeKey } from '../lib/wake.js'
 import Icon from './Icon.jsx'
 
-export default function RitualCard({ profile, partner, partnerStatus, pushToast }) {
+export default function RitualCard({ profile, partner, partnerName, partnerStatus, pushToast }) {
   const wakeKey = useWakeKey()
   const [mine, setMine] = useState(null)       // most-recent own ritual today
   const [theirs, setTheirs] = useState(null)   // most-recent partner ritual today
@@ -65,8 +65,9 @@ export default function RitualCard({ profile, partner, partnerStatus, pushToast 
     finally { setBusy(false) }
   }
 
+  const displayName = partnerName ?? partner?.display_name ?? 'they'
   const subtitle = done
-    ? (partnerHere ? `${partner?.display_name ?? 'they'} checked in · ${relativeAgo(theirs.created_at) ?? 'today'}` : 'waiting on their check-in')
+    ? (partnerHere ? `${displayName} checked in · ${relativeAgo(theirs.created_at) ?? 'today'}` : 'waiting on their check-in')
     : (partnerAsleep ? 'tuck them in for when they wake' : 'one tap to let them know you\'re safe')
 
   return (

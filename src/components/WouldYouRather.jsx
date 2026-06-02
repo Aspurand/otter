@@ -8,7 +8,7 @@ import {
   WYR_DECK,
 } from '../lib/games.js'
 
-export default function WouldYouRather({ profile, partner }) {
+export default function WouldYouRather({ profile, partner, partnerName }) {
   const wakeKey = useWakeKey()
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -55,7 +55,7 @@ export default function WouldYouRather({ profile, partner }) {
   const theirs = partner ? answers[partner.id] : null
   const bothIn = !!mine && !!theirs
   const matched = bothIn && mine === theirs
-  const partnerName = partner?.display_name ?? 'them'
+  const them = partnerName ?? partner?.display_name ?? 'them'
   const myName = profile.display_name ?? 'you'
 
   async function pick(choice) {
@@ -109,7 +109,7 @@ export default function WouldYouRather({ profile, partner }) {
           selected={mine === 'a'}
           locked={!!mine}
           mineHere={mine === 'a' ? myName : null}
-          theirsHere={bothIn && theirs === 'a' ? partnerName : null}
+          theirsHere={bothIn && theirs === 'a' ? them : null}
           onPick={pick}
         />
         <p className="wyr-or">or</p>
@@ -119,13 +119,13 @@ export default function WouldYouRather({ profile, partner }) {
           selected={mine === 'b'}
           locked={!!mine}
           mineHere={mine === 'b' ? myName : null}
-          theirsHere={bothIn && theirs === 'b' ? partnerName : null}
+          theirsHere={bothIn && theirs === 'b' ? them : null}
           onPick={pick}
         />
       </div>
 
       {mine && !bothIn && (
-        <p className="muted-note">you picked · waiting on {partnerName}…</p>
+        <p className="muted-note">you picked · waiting on {them}…</p>
       )}
       {bothIn && (
         <>

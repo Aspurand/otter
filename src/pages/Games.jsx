@@ -3,7 +3,7 @@ import DailyQuestion from '../components/DailyQuestion.jsx'
 import WouldYouRather from '../components/WouldYouRather.jsx'
 import Icon from '../components/Icon.jsx'
 
-export default function Games({ profile, partner }) {
+export default function Games({ profile, partner, partnerName }) {
   const [view, setView] = useState('hub') // 'hub' | 'dq' | 'wyr'
 
   if (view === 'dq') {
@@ -12,7 +12,7 @@ export default function Games({ profile, partner }) {
         <button className="game-back" type="button" onClick={() => setView('hub')}>
           <Icon name="back" size={16} stroke={2.6} /> play
         </button>
-        <DailyQuestion profile={profile} partner={partner} />
+        <DailyQuestion profile={profile} partner={partner} partnerName={partnerName} />
       </div>
     )
   }
@@ -22,7 +22,7 @@ export default function Games({ profile, partner }) {
         <button className="game-back" type="button" onClick={() => setView('hub')}>
           <Icon name="back" size={16} stroke={2.6} /> play
         </button>
-        <WouldYouRather profile={profile} partner={partner} />
+        <WouldYouRather profile={profile} partner={partner} partnerName={partnerName} />
       </div>
     )
   }

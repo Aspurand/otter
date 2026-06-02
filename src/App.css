@@ -257,6 +257,50 @@ body {
 .status-row {
   display: flex; gap: 5px; margin-top: 9px; flex-wrap: wrap;
 }
+
+/* current activity badge on a presence card */
+.pactivity {
+  margin-top: 7px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--accent-deep);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--accent-soft);
+  padding: 4px 10px;
+  border-radius: 999px;
+  align-self: flex-start;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pactivity-ago {
+  font-weight: 600;
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+/* tappable partner name → opens nickname sheet */
+.pname-edit {
+  background: none; border: none; padding: 0; cursor: pointer;
+  font: inherit; color: inherit;
+  display: inline-flex; align-items: center; gap: 5px;
+  border-radius: 6px;
+  transition: opacity .12s;
+}
+.pname-edit:hover { opacity: 0.75; }
+.pname-edit-pencil {
+  font-size: 10.5px;
+  color: var(--muted);
+  opacity: 0;
+  transition: opacity .15s;
+}
+.pname-edit:hover .pname-edit-pencil { opacity: 1; }
+@media (hover: none) {
+  .pname-edit-pencil { opacity: 0.55; }
+}
 .chip {
   font-size: 11px; font-weight: 700; padding: 5px 9px;
   border-radius: 999px; border: 1.5px solid var(--line);
@@ -266,6 +310,77 @@ body {
 }
 .chip:hover { border-color: color-mix(in oklch, var(--accent) 40%, var(--line)); }
 .chip.on { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
+
+/* ───────── activity grid ("what you're up to") ───────── */
+
+.activity-card .card-label {
+  display: flex;
+  align-items: center;
+}
+.activity-clear {
+  margin-left: auto;
+  font-family: var(--font);
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--accent);
+  background: none;
+  border: none;
+  padding: 4px 6px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.activity-clear:hover { color: var(--accent-deep); }
+
+.activity-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 7px;
+}
+.activity-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 6px 8px;
+  background: var(--card);
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  cursor: pointer;
+  font-family: var(--font);
+  color: var(--ink);
+  transition: border-color .12s, background .12s, transform .06s;
+  min-height: 70px;
+  text-align: center;
+}
+.activity-tile:hover:not(:disabled) {
+  border-color: color-mix(in oklch, var(--accent) 40%, var(--line));
+}
+.activity-tile:active:not(:disabled) { transform: scale(.97); }
+.activity-tile:disabled { opacity: 0.55; cursor: wait; }
+.activity-tile.on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+  box-shadow: var(--shadow-1);
+}
+.activity-emoji {
+  font-size: 22px;
+  line-height: 1;
+}
+.activity-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1.15;
+  text-transform: lowercase;
+  letter-spacing: 0.01em;
+  white-space: normal;
+}
+
+/* On narrower screens, drop to 3-wide grid */
+@media (max-width: 360px) {
+  .activity-grid { grid-template-columns: repeat(3, 1fr); }
+}
 
 /* ───────── reunion countdown ───────── */
 

@@ -18,6 +18,7 @@ import Watch from './pages/Watch.jsx'
 import Brand from './components/Brand.jsx'
 import TabBar from './components/TabBar.jsx'
 import SettingsSheet from './components/SettingsSheet.jsx'
+import NicknameSheet from './components/NicknameSheet.jsx'
 import './App.css'
 
 const DARK_KEY = 'otter:dark'
@@ -35,6 +36,7 @@ export default function App() {
   const [overlay, setOverlay] = useState(null)           // null | 'watch'
   const [toasts, setToasts] = useState([])
   const [showSettings, setShowSettings] = useState(false)
+  const [showNickname, setShowNickname] = useState(false)
   const [loveMood, setLoveMood] = useState(false)
   const [chatUnread, setChatUnread] = useState(0)
   const [reunionDays, setReunionDays] = useState(null)
@@ -341,6 +343,9 @@ export default function App() {
 
   // Mascot mood — single source of truth.
   const partnerStatus = partner ? (presence[partner.id]?.status ?? partner.status ?? 'free') : 'free'
+  // Single source of truth for what to call the partner: your nickname for them
+  // (if set) takes precedence over their actual display_name.
+  const partnerName = (profile?.partner_nickname?.trim()) || partner?.display_name || 'them'
   const mascotMood = useMemo(() => {
     if (loveMood) return 'love'
     if (partnerStatus === 'asleep') return 'sleepy'
@@ -377,16 +382,17 @@ export default function App() {
   const screen = (() => {
     if (overlay === 'watch') return <Watch profile={profile} onBack={() => setOverlay(null)} />
     switch (tab) {
-      case 'chat':  return <Chat profile={profile} partner={partner} presence={presence} />
+      case 'chat':  return <Chat profile={profile} partner={partner} partnerName={partnerName} presence={presence} />
       case 'us':    return <Memories profile={profile} pushToast={pushToast} throwback={throwback} />
       case 'plans': return <Calendar profile={profile} onOpenWatch={() => setOverlay('watch')} />
-      case 'play':  return <Games profile={profile} partner={partner} />
+      case 'play':  return <Games profile={profile} partner={partner} partnerName={partnerName} />
       case 'home':
       default:
         return (
           <Home
             profile={profile}
             partner={partner}
+            partnerName={partnerName}
             presence={presence}
             mascotMood={mascotMood}
             reunionDays={reunionDays}
@@ -394,6 +400,7 @@ export default function App() {
             onDismissNudge={dismissUnreadNudge}
             onPatchProfile={onPatchProfile}
             onOpenSettings={() => setShowSettings(true)}
+            onEditNickname={() => setShowNickname(true)}
             pushToast={pushToast}
             triggerLoveMood={triggerLoveMood}
           />
@@ -428,6 +435,14 @@ export default function App() {
           dark={dark}
           onToggleDark={(v) => setDark(v)}
           onClose={() => setShowSettings(false)}
+          onSaved={(p) => onPatchProfile(p)}
+        />
+      )}
+      {showNickname && partner && (
+        <NicknameSheet
+          profile={profile}
+          partner={partner}
+          onClose={() => setShowNickname(false)}
           onSaved={(p) => onPatchProfile(p)}
         />
       )}

@@ -7,10 +7,12 @@ import LoveLanguagePrompt from '../components/LoveLanguagePrompt.jsx'
 import RitualCard from '../components/RitualCard.jsx'
 import LoveNoteSheet from '../components/LoveNoteSheet.jsx'
 import UnreadNudges from '../components/UnreadNudges.jsx'
+import ActivityGrid from '../components/ActivityGrid.jsx'
 
 export default function Home({
   profile,
   partner,
+  partnerName: partnerNameProp,
   presence,
   mascotMood = 'happy',
   reunionDays = null,
@@ -18,13 +20,14 @@ export default function Home({
   onDismissNudge,
   onPatchProfile,
   onOpenSettings,
+  onEditNickname,
   pushToast,
   triggerLoveMood,
 }) {
   const [noteSeed, setNoteSeed] = useState(null)
 
   const greeting = useMemo(() => greet(profile.display_name), [profile.display_name])
-  const partnerName = partner?.display_name ?? 'them'
+  const partnerName = partnerNameProp ?? partner?.display_name ?? 'them'
 
   const partnerStatus = partner ? (presence[partner.id]?.status ?? partner.status ?? 'free') : 'free'
 
@@ -40,9 +43,13 @@ export default function Home({
       <PresenceBar
         profile={profile}
         partner={partner}
+        partnerName={partnerName}
         presence={presence}
         onStatusChange={(s) => onPatchProfile({ status: s, last_active: new Date().toISOString() })}
+        onEditNickname={onEditNickname}
       />
+
+      <ActivityGrid profile={profile} onPatchProfile={onPatchProfile} />
 
       {/* Unread nudges sit BELOW presence so they can never push the partner clock
           or the reunion countdown off-screen, no matter how many stack up. */}
@@ -65,6 +72,7 @@ export default function Home({
       <RitualCard
         profile={profile}
         partner={partner}
+        partnerName={partnerName}
         partnerStatus={partnerStatus}
         pushToast={pushToast}
       />

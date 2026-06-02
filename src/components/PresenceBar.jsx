@@ -1,9 +1,11 @@
 // Two pcards side-by-side: you on the left, partner on the right (gradient).
-// Status chips live in the user's own card.
+// Status chips live in the user's own card. Tap partner's name → nickname sheet.
+// Partner's recent activity (within 2h) shows under their time.
 
 import { useEffect, useMemo, useState } from 'react'
 import { formatLocalTime, getLocalHour, tzOffsetLabel, relativeAgo } from '../lib/timezone.js'
 import { updateMyProfile } from '../lib/profile.js'
+import { getActivity, isActivityFresh } from '../lib/activities.js'
 
 const STATUSES = [
   { key: 'free',   label: 'free',   color: '#2f7a4e' },
@@ -14,7 +16,14 @@ const STATUSES = [
 
 const STATUS_META = Object.fromEntries(STATUSES.map((s) => [s.key, s]))
 
-export default function PresenceBar({ profile, partner, presence = {}, onStatusChange }) {
+export default function PresenceBar({
+  profile,
+  partner,
+  presence = {},
+  partnerName = 'partner',
+  onStatusChange,
+  onEditNickname,
+}) {
   const [now, setNow] = useState(() => new Date())
 
   useEffect(() => {
@@ -35,8 +44,6 @@ export default function PresenceBar({ profile, partner, presence = {}, onStatusC
       await updateMyProfile({ status: s, last_active: new Date().toISOString() })
     } catch (e) {
       console.error('status update failed', e)
-      // Only roll back if the user hasn't moved on to yet another status in the meantime.
-      // Otherwise we'd clobber a more recent in-flight choice.
       if (profile.status === s) onStatusChange?.(prev)
     }
   }
@@ -60,6 +67,12 @@ export default function PresenceBar({ profile, partner, presence = {}, onStatusC
     return 'a good moment to say hi'
   }, [partner, partnerStatus, now])
 
+  // My activity tag — for the my-card.
+  const myActivity = isActivityFresh(profile.activity_at) ? getActivity(profile.activity) : null
+  // Partner activity — only show if fresh (within 2h).
+  const partnerActivity = partner && isActivityFresh(partner.activity_at) ? getActivity(partner.activity) : null
+  const partnerActivityAgo = partnerActivity ? relativeAgo(partner.activity_at) : null
+
   return (
     <section className="presence">
       <div className="pcard">
@@ -71,6 +84,11 @@ export default function PresenceBar({ profile, partner, presence = {}, onStatusC
           {myTime.hm}<span className="ampm">{myTime.ampm}</span>
         </div>
         <div className="pmeta">{tzOffsetLabel(profile.timezone)} · {myMeta.label}</div>
+        {myActivity && (
+          <div className="pactivity" aria-label="your current activity">
+            <span aria-hidden>{myActivity.emoji}</span> {myActivity.label}
+          </div>
+        )}
         <div className="status-row" role="group" aria-label="set my status">
           {STATUSES.map((s) => (
             <button
@@ -86,12 +104,31 @@ export default function PresenceBar({ profile, partner, presence = {}, onStatusC
       <div className="pcard partner">
         <div className="pname">
           <span className="dot" style={{ background: partnerMeta.color, color: partnerMeta.color }} />
-          <span>{partner?.display_name ?? 'partner'}</span>
+          {partner ? (
+            <button
+              type="button"
+              className="pname-edit"
+              onClick={() => onEditNickname?.()}
+              aria-label={`edit nickname for ${partner.display_name ?? 'partner'}`}
+              title="edit nickname"
+            >
+              {partnerName}
+              <span className="pname-edit-pencil" aria-hidden>✎</span>
+            </button>
+          ) : (
+            <span>partner</span>
+          )}
         </div>
         {partner ? (
           <>
             <div className="ptime">{theirTime.hm}<span className="ampm">{theirTime.ampm}</span></div>
             <div className="pmeta">{tzOffsetLabel(partner.timezone)} · {partnerHint}</div>
+            {partnerActivity && (
+              <div className="pactivity" aria-label="partner's current activity">
+                <span aria-hidden>{partnerActivity.emoji}</span> {partnerActivity.label}
+                {partnerActivityAgo && <span className="pactivity-ago"> · {partnerActivityAgo}</span>}
+              </div>
+            )}
             <div className="phint">
               <span>♥</span> {reachoutHint}
             </div>
@@ -105,7 +142,7 @@ export default function PresenceBar({ profile, partner, presence = {}, onStatusC
 }
 
 function formatTimeParts(tz, now) {
-  const full = formatLocalTime(tz, now) // e.g. "4:03 PM"
+  const full = formatLocalTime(tz, now)
   const m = full.match(/^(\d{1,2}:\d{2})\s*(AM|PM)$/i)
   if (!m) return { hm: full, ampm: '' }
   return { hm: m[1], ampm: m[2].toLowerCase() }

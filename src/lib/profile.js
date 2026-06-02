@@ -19,6 +19,29 @@ export async function markThrowbackSeen(memoryId) {
   return updateMyProfile({ last_seen_throwback_id: memoryId })
 }
 
+// Set the current activity. Pass status=null to leave the 4-state alone, or a
+// value to also flip status (e.g. 'travelling' → away, 'bedtime' → asleep).
+export async function setActivity(activityKey, status = null) {
+  const patch = {
+    activity: activityKey || null,
+    activity_at: activityKey ? new Date().toISOString() : null,
+  }
+  if (status) patch.status = status
+  if (status || activityKey) patch.last_active = new Date().toISOString()
+  return updateMyProfile(patch)
+}
+
+export async function clearActivity() {
+  return updateMyProfile({ activity: null, activity_at: null })
+}
+
+// Set/clear the nickname YOU use for your partner. Stored on YOUR profile,
+// so each side independently chooses what to call the other.
+export async function setPartnerNickname(nickname) {
+  const v = (nickname ?? '').trim()
+  return updateMyProfile({ partner_nickname: v || null })
+}
+
 export function detectTimezone() {
   try {
     return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'

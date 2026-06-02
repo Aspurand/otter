@@ -8,8 +8,9 @@ import {
   todayISO,
 } from '../lib/games.js'
 
-export default function DailyQuestion({ profile, partner }) {
+export default function DailyQuestion({ profile, partner, partnerName }) {
   const wakeKey = useWakeKey()
+  const them = partnerName ?? partner?.display_name ?? 'them'
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
   const [draft, setDraft] = useState('')
@@ -92,7 +93,7 @@ export default function DailyQuestion({ profile, partner }) {
       ) : !bothIn ? (
         <div className="card">
           <div className="waiting"><span className="pip" /><span className="pip" /><span className="pip" /></div>
-          <p className="muted-note" style={{ marginTop: 8 }}>answer saved · waiting for {partner?.display_name ?? 'them'} to reply…</p>
+          <p className="muted-note" style={{ marginTop: 8 }}>answer saved · waiting for {them} to reply…</p>
         </div>
       ) : (
         <div className="reveal">
@@ -101,7 +102,7 @@ export default function DailyQuestion({ profile, partner }) {
             <p className="ans-text">{myAnswer}</p>
           </div>
           <div className="card ans-card" style={{ background: 'var(--accent-soft)', borderColor: 'transparent' }}>
-            <p className="ans-who">{partner?.display_name ?? 'partner'}</p>
+            <p className="ans-who">{them}</p>
             <p className="ans-text">{partnerAnswer}</p>
           </div>
           <p className="muted-note">come back tomorrow for a new one 🤍</p>

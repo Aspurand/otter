@@ -14,8 +14,9 @@ const STATUS_LABELS = {
   away: 'away',
 }
 
-export default function Chat({ profile, partner, presence }) {
+export default function Chat({ profile, partner, partnerName, presence }) {
   const wakeKey = useWakeKey()
+  const displayName = partnerName ?? partner?.display_name ?? 'partner'
   const [messages, setMessages] = useState([])
   const [loadingOlder, setLoadingOlder] = useState(false)
   const [hasMore, setHasMore] = useState(true)
@@ -168,7 +169,7 @@ export default function Chat({ profile, partner, presence }) {
       <header className="chat-head">
         <OtterMascot mood="happy" size={42} />
         <div className="htext">
-          <strong>{partner?.display_name ?? 'partner'}</strong>
+          <strong>{displayName}</strong>
           <span className="csub">
             <span className="dot" style={{ width: 7, height: 7, background: dotColor(partnerStatus), color: dotColor(partnerStatus), boxShadow: 'none' }} />
             {partner ? (STATUS_LABELS[partnerStatus] ?? 'free') : 'waiting for them to join'}
@@ -204,7 +205,7 @@ export default function Chat({ profile, partner, presence }) {
         <input
           value={composer}
           onChange={(e) => { setComposer(e.target.value); broadcastTyping() }}
-          placeholder={`message ${partner?.display_name ?? 'them'}…`}
+          placeholder={`message ${displayName}…`}
           enterKeyHint="send"
           autoComplete="off"
           aria-label="message"
