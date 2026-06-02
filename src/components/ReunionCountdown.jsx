@@ -22,19 +22,45 @@ export default function ReunionCountdown({ coupleId }) {
     return () => { alive = false }
   }, [coupleId])
 
+  // Hybrid tick: 1s when ≤ 1 hour to go (so the final stretch shows live seconds),
+  // 60s otherwise (cheap battery cost). Also pauses when the tab is hidden so a
+  // backgrounded PWA isn't running timers for nothing — visibilitychange in App.jsx
+  // re-fetches data the moment the tab comes back, so we won't show stale values.
   useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 60_000)
-    return () => clearInterval(id)
-  }, [])
+    if (!reunion) return
+    let timer = null
+    function plan() {
+      clearInterval(timer)
+      if (document.visibilityState !== 'visible') return
+      const ms = new Date(reunion.starts_at).getTime() - Date.now()
+      if (ms <= 0) return
+      const interval = ms <= 3_600_000 ? 1_000 : 60_000
+      setNow(new Date()) // immediate refresh on (re)plan
+      timer = setInterval(() => {
+        setNow(new Date())
+        // If we just crossed the 1h boundary, re-plan to switch cadences.
+        const remaining = new Date(reunion.starts_at).getTime() - Date.now()
+        const wantInterval = remaining <= 3_600_000 ? 1_000 : 60_000
+        if (wantInterval !== interval) plan()
+      }, interval)
+    }
+    plan()
+    document.addEventListener('visibilitychange', plan)
+    return () => {
+      clearInterval(timer)
+      document.removeEventListener('visibilitychange', plan)
+    }
+  }, [reunion])
 
   const breakdown = useMemo(() => {
     if (!reunion) return null
     const ms = new Date(reunion.starts_at).getTime() - now.getTime()
     if (ms <= 0) return { past: true }
-    const days = Math.floor(ms / 86_400_000)
+    const days  = Math.floor(ms / 86_400_000)
     const hours = Math.floor((ms % 86_400_000) / 3_600_000)
     const mins  = Math.floor((ms % 3_600_000) / 60_000)
-    return { days, hours, mins }
+    const secs  = Math.floor((ms % 60_000) / 1_000)
+    return { days, hours, mins, secs, finalHour: ms <= 3_600_000 }
   }, [reunion, now])
 
   async function onAdd(e) {
@@ -64,15 +90,27 @@ export default function ReunionCountdown({ coupleId }) {
       <section className="card reunion">
         <p className="card-label"><span className="dot" /> counting down to</p>
         <div className="countdown">
-          <div className="cd-num"><strong>{breakdown.days}</strong><span>days</span></div>
-          <span className="cd-colon">:</span>
-          <div className="cd-num"><strong>{String(breakdown.hours).padStart(2, '0')}</strong><span>hrs</span></div>
-          <span className="cd-colon">:</span>
-          <div className="cd-num"><strong>{String(breakdown.mins).padStart(2, '0')}</strong><span>min</span></div>
+          {breakdown.finalHour ? (
+            <>
+              <div className="cd-num"><strong>{String(breakdown.mins).padStart(2, '0')}</strong><span>min</span></div>
+              <span className="cd-colon">:</span>
+              <div className="cd-num"><strong>{String(breakdown.secs).padStart(2, '0')}</strong><span>sec</span></div>
+            </>
+          ) : (
+            <>
+              <div className="cd-num"><strong>{breakdown.days}</strong><span>days</span></div>
+              <span className="cd-colon">:</span>
+              <div className="cd-num"><strong>{String(breakdown.hours).padStart(2, '0')}</strong><span>hrs</span></div>
+              <span className="cd-colon">:</span>
+              <div className="cd-num"><strong>{String(breakdown.mins).padStart(2, '0')}</strong><span>min</span></div>
+            </>
+          )}
         </div>
         <p className="reunion-title">{reunion.title}</p>
         <p className="reunion-when">{new Date(reunion.starts_at).toLocaleString()}</p>
-        {soon && <span className="reunion-soon">✨ so close now</span>}
+        {breakdown.finalHour
+          ? <span className="reunion-soon">✨ almost there</span>
+          : soon && <span className="reunion-soon">✨ so close now</span>}
       </section>
     )
   }
