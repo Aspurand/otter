@@ -103,6 +103,13 @@ body {
 }
 .otter-scroll::-webkit-scrollbar { width: 0; }
 
+/* Critical: stop flex from squashing card content. Without this, a tall stack
+   of cards (presence + unread nudges + reunion + nudge + ritual + LL prompt)
+   gets compressed down to fit the viewport, and cards with overflow:hidden
+   (the reunion gradient) clip their own contents. With shrink:0, total height
+   grows naturally and overflow-y:auto kicks in. */
+.otter-scroll > * { flex-shrink: 0; }
+
 /* chat / full-screen tabs use this — composer sits ABOVE the floating tab bar */
 .otter-scroll.flush {
   padding: 0 0 calc(94px + env(safe-area-inset-bottom));
