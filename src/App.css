@@ -835,11 +835,19 @@ body {
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 .sheet {
   width: 100%; background: var(--card); color: var(--ink);
-  border-radius: 26px 26px 0 0; padding: 10px 18px calc(28px + env(safe-area-inset-bottom));
+  border-radius: 26px 26px 0 0;
+  /* Bottom padding clears the floating tab bar (~64px height + ~18px from edge)
+     so the action button is never hidden, even on browsers without :has() below. */
+  padding: 10px 18px calc(96px + env(safe-area-inset-bottom));
   box-shadow: 0 -10px 40px rgba(0,0,0,.3);
   animation: sheet-up .3s cubic-bezier(.2,.85,.25,1);
-  max-height: 86%; overflow-y: auto;
+  max-height: 92%; overflow-y: auto;
 }
+
+/* Hide the tab bar whenever a sheet is open so the action button has room.
+   Modern browsers only (Chrome 105+, Safari 15.4+, Firefox 121+).
+   Older browsers fall through to the sheet padding above. */
+.otter-app:has(.sheet-back) .tabbar { display: none; }
 @keyframes sheet-up { from { transform: translateY(30px); opacity: .6; } to { transform: none; opacity: 1; } }
 .sheet-grip { width: 38px; height: 5px; border-radius: 999px; background: var(--line); margin: 0 auto 14px; }
 .sheet h2 { margin: 0 0 14px; font-size: 19px; font-weight: 800; }
