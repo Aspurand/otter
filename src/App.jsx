@@ -6,6 +6,7 @@ import { fetchNextReunion } from './lib/events.js'
 import { fetchUnreadFromPartner, markNudgeRead } from './lib/nudges.js'
 import { fetchThrowback } from './lib/memories.js'
 import { markThrowbackSeen } from './lib/profile.js'
+import { WakeContext } from './lib/wake.js'
 import SignIn from './pages/SignIn.jsx'
 import Onboarding from './pages/Onboarding.jsx'
 import Home from './pages/Home.jsx'
@@ -39,6 +40,7 @@ export default function App() {
   const [reunionDays, setReunionDays] = useState(null)
   const [unreadNudges, setUnreadNudges] = useState([])
   const [throwback, setThrowback] = useState(null)
+  const [wakeKey, setWakeKey] = useState(0)
   const [dark, setDark] = useState(() => {
     try { return localStorage.getItem(DARK_KEY) === '1' } catch { return false }
   })
@@ -106,7 +108,7 @@ export default function App() {
       setPartner(people.find((p) => p.id !== profile.id) ?? null)
     })
     return () => { alive = false }
-  }, [phase, profile?.couple_id, profile?.id])
+  }, [phase, profile?.couple_id, profile?.id, wakeKey])
 
   // ────────── presence channel (shared by Home presence bar + Chat header) ──────────
   useEffect(() => {
@@ -128,7 +130,7 @@ export default function App() {
       channelRef.current = null
       setPresence({})
     }
-  }, [phase, profile?.couple_id, profile?.id])
+  }, [phase, profile?.couple_id, profile?.id, wakeKey])
 
   useEffect(() => {
     const ch = channelRef.current
@@ -151,7 +153,7 @@ export default function App() {
       )
       .subscribe()
     return () => { supabase.removeChannel(ch) }
-  }, [phase, profile?.couple_id, profile?.id, tab])
+  }, [phase, profile?.couple_id, profile?.id, tab, wakeKey])
 
   // Declared early so the unread-nudges effects below can call it.
   // ────────── helper callbacks ──────────
@@ -186,7 +188,7 @@ export default function App() {
       })
       .catch(() => {})
     return () => { alive = false }
-  }, [phase, profile?.couple_id, partner?.id])
+  }, [phase, profile?.couple_id, partner?.id, wakeKey])
 
   // Realtime: append new ones, drop ones that get marked read (e.g. from another device).
   useEffect(() => {
@@ -226,7 +228,7 @@ export default function App() {
       )
       .subscribe()
     return () => { supabase.removeChannel(ch) }
-  }, [phase, profile?.couple_id, profile?.id, partner?.id, triggerLoveMoodEarly])
+  }, [phase, profile?.couple_id, profile?.id, partner?.id, triggerLoveMoodEarly, wakeKey])
 
   const dismissUnreadNudge = useCallback(async (id) => {
     setUnreadNudges((prev) => prev.filter((n) => n.id !== id))
@@ -241,7 +243,7 @@ export default function App() {
       .then((m) => { if (alive) setThrowback(m) })
       .catch(() => { if (alive) setThrowback(null) })
     return () => { alive = false }
-  }, [phase, profile?.couple_id])
+  }, [phase, profile?.couple_id, wakeKey])
 
   // Mark the throwback as seen when the user lands on the Us tab.
   useEffect(() => {
@@ -267,54 +269,65 @@ export default function App() {
       })
       .catch(() => { if (alive) setReunionDays(null) })
     return () => { alive = false }
-  }, [phase, profile?.couple_id, tab])
+  }, [phase, profile?.couple_id, tab, wakeKey])
 
-  // ────────── visibility recovery ──────────
-  // iOS PWAs and Android Chrome sometimes drop the WebSocket and stop updating
-  // data after long idle. When the tab becomes visible again, refresh the session
-  // (token may have expired during background), re-fetch the key data, and
-  // bounce the realtime client so all channels reconnect.
+  // ────────── wake recovery ──────────
+  // iOS PWA + Android Chrome drop the realtime WebSocket when backgrounded for
+  // more than ~30s, and the SDK's built-in auto-rejoin is flaky. On wake we:
+  //   1) try to refresh the auth session — if the refresh token expired, kick
+  //      the user back to sign-in instead of leaving them in a half-dead state;
+  //   2) bump wakeKey, which is in every channel-creating effect's deps. That
+  //      forces cleanup → re-create across the app and is the only reliable way
+  //      to recover dropped channels.
+  // We listen to all four wake signals because iOS Safari can swallow any of
+  // them individually (visibilitychange may not fire on quick app-switches,
+  // focus is reliable on desktop, pageshow fires on BFCache restore, online
+  // catches network blips that don't involve a visibility change at all).
   useEffect(() => {
-    if (phase !== 'home' || !profile?.couple_id) return
-    let lastBumpAt = 0
-    function onVisible() {
+    let lastWakeAt = 0
+    let cancelled = false
+    async function onWake(reason) {
       if (document.visibilityState !== 'visible') return
       const now = Date.now()
-      if (now - lastBumpAt < 2_000) return // debounce; visibilitychange can double-fire
-      lastBumpAt = now
-      ;(async () => {
-        try { await supabase.auth.refreshSession() } catch { /* fine if it errors */ }
-        try { await refreshProfile() } catch { /* non-fatal */ }
-        // Re-fetch partner so their fields (timezone, etc.) are current.
-        try {
-          const people = await fetchCoupleProfiles(profile.couple_id)
-          setPartner(people.find((p) => p.id !== profile.id) ?? null)
-        } catch { /* non-fatal */ }
-        // Re-fetch unread nudges in case we missed realtime events.
-        if (partner?.id) {
-          try {
-            const rows = await fetchUnreadFromPartner(profile.couple_id, partner.id)
-            setUnreadNudges((prev) => {
-              const seen = new Set(prev.map((x) => x.id))
-              const merged = [...prev]
-              for (const r of rows) if (!seen.has(r.id)) merged.push(r)
-              merged.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-              return merged
-            })
-          } catch { /* non-fatal */ }
+      if (now - lastWakeAt < 2_000) return // debounce; events can pile up
+      lastWakeAt = now
+
+      // Refresh the JWT. If we're past the refresh-token window, the user is
+      // effectively signed out — surface that instead of silently failing.
+      try {
+        const { data, error } = await supabase.auth.refreshSession()
+        if (cancelled) return
+        if (error || !data?.session) {
+          setSession(null); setProfile(null); setPartner(null); setPhase('signed-out')
+          return
         }
-        // Force the realtime client to reconnect any dropped channels.
-        try { supabase.realtime.disconnect() } catch { /* ignore */ }
-        try { supabase.realtime.connect() } catch { /* ignore */ }
-      })()
+      } catch { /* network blip — bump wakeKey anyway and try again on next wake */ }
+
+      // Re-fetch the primary data so we don't show stale state while channels
+      // are re-establishing.
+      try { await refreshProfile() } catch { /* non-fatal */ }
+      void reason // available for debug logging if needed
+
+      // Forces every channel-creating effect across the app to tear down + re-create.
+      setWakeKey((k) => k + 1)
     }
-    document.addEventListener('visibilitychange', onVisible)
-    window.addEventListener('focus', onVisible)
+    const visibilityHandler = () => onWake('visibility')
+    const focusHandler      = () => onWake('focus')
+    const pageshowHandler   = () => onWake('pageshow')
+    const onlineHandler     = () => onWake('online')
+
+    document.addEventListener('visibilitychange', visibilityHandler)
+    window.addEventListener('focus',   focusHandler)
+    window.addEventListener('pageshow', pageshowHandler)
+    window.addEventListener('online',   onlineHandler)
     return () => {
-      document.removeEventListener('visibilitychange', onVisible)
-      window.removeEventListener('focus', onVisible)
+      cancelled = true
+      document.removeEventListener('visibilitychange', visibilityHandler)
+      window.removeEventListener('focus',   focusHandler)
+      window.removeEventListener('pageshow', pageshowHandler)
+      window.removeEventListener('online',   onlineHandler)
     }
-  }, [phase, profile?.couple_id, profile?.id, partner?.id, refreshProfile])
+  }, [refreshProfile])
 
   // ────────── persist dark mode ──────────
   useEffect(() => {
@@ -389,6 +402,7 @@ export default function App() {
   })()
 
   return (
+    <WakeContext.Provider value={wakeKey}>
     <div className="otter-app" data-mood={dark ? 'dark' : 'light'}>
       <div key={overlay ?? tab} style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         {screen}
@@ -418,6 +432,7 @@ export default function App() {
         />
       )}
     </div>
+    </WakeContext.Provider>
   )
 }
 

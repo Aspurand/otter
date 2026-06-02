@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
+import { useWakeKey } from '../lib/wake.js'
 import {
   getOrCreateSession,
   setStateKey,
@@ -8,6 +9,7 @@ import {
 } from '../lib/games.js'
 
 export default function DailyQuestion({ profile, partner }) {
+  const wakeKey = useWakeKey()
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
   const [draft, setDraft] = useState('')
@@ -29,7 +31,7 @@ export default function DailyQuestion({ profile, partner }) {
       finally { if (alive) setLoading(false) }
     })()
     return () => { alive = false }
-  }, [profile.couple_id])
+  }, [profile.couple_id, wakeKey])
 
   useEffect(() => {
     if (!profile.couple_id) return
@@ -45,7 +47,7 @@ export default function DailyQuestion({ profile, partner }) {
       )
       .subscribe()
     return () => { supabase.removeChannel(ch) }
-  }, [profile.couple_id])
+  }, [profile.couple_id, wakeKey])
 
   if (loading) return <p className="hint">loading…</p>
   if (!session) return <p className="error">{error ?? 'no session'}</p>

@@ -5,9 +5,11 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { sendRitual, fetchMyRitualToday, fetchPartnerRitualToday } from '../lib/ritual.js'
 import { relativeAgo } from '../lib/timezone.js'
+import { useWakeKey } from '../lib/wake.js'
 import Icon from './Icon.jsx'
 
 export default function RitualCard({ profile, partner, partnerStatus, pushToast }) {
+  const wakeKey = useWakeKey()
   const [mine, setMine] = useState(null)       // most-recent own ritual today
   const [theirs, setTheirs] = useState(null)   // most-recent partner ritual today
   const [busy, setBusy] = useState(false)
@@ -22,7 +24,7 @@ export default function RitualCard({ profile, partner, partnerStatus, pushToast 
       partnerId ? fetchPartnerRitualToday(profile.couple_id, partnerId) : Promise.resolve(null),
     ]).then(([m, t]) => { if (alive) { setMine(m); setTheirs(t) } }).catch(() => {})
     return () => { alive = false }
-  }, [profile.couple_id, profile.id, partner?.id])
+  }, [profile.couple_id, profile.id, partner?.id, wakeKey])
 
   // Realtime — listen for ritual nudges from the partner.
   useEffect(() => {
@@ -41,7 +43,7 @@ export default function RitualCard({ profile, partner, partnerStatus, pushToast 
       )
       .subscribe()
     return () => { supabase.removeChannel(ch) }
-  }, [profile.couple_id, partner?.id])
+  }, [profile.couple_id, partner?.id, wakeKey])
 
   const partnerAsleep = partnerStatus === 'asleep'
   const kind = partnerAsleep ? 'goodnight' : 'okay'

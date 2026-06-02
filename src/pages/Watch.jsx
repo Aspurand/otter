@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { fetchCurrentSession, startSession, updateSession, endSession } from '../lib/watch.js'
+import { useWakeKey } from '../lib/wake.js'
 
 const DRIFT_SECONDS = 2.0
 const IGNORE_REMOTE_MS = 350
 
 export default function Watch({ profile, onBack }) {
+  const wakeKey = useWakeKey()
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
   const [starting, setStarting] = useState(false)
@@ -22,7 +24,7 @@ export default function Watch({ profile, onBack }) {
       .then((s) => { if (alive) { setSession(s); setLoading(false) } })
       .catch((e) => { if (alive) { setError(e.message); setLoading(false) } })
     return () => { alive = false }
-  }, [profile.couple_id])
+  }, [profile.couple_id, wakeKey])
 
   useEffect(() => {
     if (!profile.couple_id) return
@@ -48,7 +50,7 @@ export default function Watch({ profile, onBack }) {
       )
       .subscribe()
     return () => { supabase.removeChannel(ch) }
-  }, [profile.couple_id])
+  }, [profile.couple_id, wakeKey])
 
   function applyRemote(s) {
     const v = videoRef.current

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { fetchMessages, sendMessage, markRead } from '../lib/chat.js'
+import { useWakeKey } from '../lib/wake.js'
 import OtterMascot from '../components/OtterMascot.jsx'
 import Icon from '../components/Icon.jsx'
 
@@ -14,6 +15,7 @@ const STATUS_LABELS = {
 }
 
 export default function Chat({ profile, partner, presence }) {
+  const wakeKey = useWakeKey()
   const [messages, setMessages] = useState([])
   const [loadingOlder, setLoadingOlder] = useState(false)
   const [hasMore, setHasMore] = useState(true)
@@ -45,7 +47,7 @@ export default function Chat({ profile, partner, presence }) {
       })
       .catch((e) => console.error('fetchMessages failed', e))
     return () => { alive = false }
-  }, [profile.couple_id, profile.id])
+  }, [profile.couple_id, profile.id, wakeKey])
 
   useEffect(() => {
     if (initialScrollDoneRef.current) return
@@ -80,7 +82,7 @@ export default function Chat({ profile, partner, presence }) {
       )
       .subscribe()
     return () => { supabase.removeChannel(ch) }
-  }, [profile.couple_id, profile.id])
+  }, [profile.couple_id, profile.id, wakeKey])
 
   // --- Realtime broadcast: typing indicator -----------------------------------------------
   useEffect(() => {
@@ -99,7 +101,7 @@ export default function Chat({ profile, partner, presence }) {
       typingChRef.current = null
       clearTimeout(partnerTypingTimeoutRef.current)
     }
-  }, [profile.couple_id, profile.id])
+  }, [profile.couple_id, profile.id, wakeKey])
 
   // --- Auto-scroll when new content arrives and the user is near the bottom -------------
   useEffect(() => {
