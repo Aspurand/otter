@@ -1,77 +1,178 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   fetchUpcoming,
+  fetchRange,
   createEvent,
   updateEvent,
   deleteEvent,
   EVENT_TYPES,
 } from '../lib/events.js'
+import { supabase } from '../lib/supabase.js'
+import { useWakeKey } from '../lib/wake.js'
 import Icon from '../components/Icon.jsx'
 
 const TYPE_EMOJI = { call: '📞', date: '🍝', visit: '✈️', anniversary: '🤍' }
+const DOW = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
+const MONTHS = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december']
 
-export default function Calendar({ profile, onOpenWatch }) {
-  const [events, setEvents] = useState([])
+export default function Calendar({ profile, partnerName, onOpenWatch }) {
+  const wakeKey = useWakeKey()
+  const [events, setEvents] = useState([])           // upcoming list (can span months)
+  const [monthEvents, setMonthEvents] = useState([]) // everything in the displayed month (incl. past days)
+  const [month, setMonth] = useState(() => startOfMonth(new Date()))
+  const [selectedDay, setSelectedDay] = useState(null) // 'YYYY-MM-DD' | null
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [showForm, setShowForm] = useState(false)
+  const [formDate, setFormDate] = useState(null)     // prefill when adding from a tapped day
   const [editing, setEditing] = useState(null)
+
+  const reload = useCallback(async () => {
+    const next = addMonths(month, 1)
+    const [up, mo] = await Promise.all([
+      fetchUpcoming(profile.couple_id),
+      fetchRange(profile.couple_id, month.toISOString(), next.toISOString()),
+    ])
+    return { up, mo }
+  }, [profile.couple_id, month])
 
   useEffect(() => {
     let alive = true
-    fetchUpcoming(profile.couple_id)
-      .then((rows) => { if (alive) { setEvents(rows); setLoading(false) } })
+    reload()
+      .then(({ up, mo }) => { if (alive) { setEvents(up); setMonthEvents(mo); setError(null); setLoading(false) } })
       .catch((e) => { if (alive) { setError(e.message); setLoading(false) } })
     return () => { alive = false }
-  }, [profile.couple_id])
+  }, [reload, wakeKey])
 
+  // Live updates: when either of you adds/edits/deletes a plan on any device,
+  // both calendars refresh without a reload.
+  useEffect(() => {
+    if (!profile.couple_id) return
+    let alive = true
+    const ch = supabase
+      .channel(`events-cal:${profile.couple_id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'events', filter: `couple_id=eq.${profile.couple_id}` },
+        () => {
+          reload()
+            .then(({ up, mo }) => { if (alive) { setEvents(up); setMonthEvents(mo) } })
+            .catch(() => {})
+        },
+      )
+      .subscribe()
+    return () => { alive = false; supabase.removeChannel(ch) }
+  }, [profile.couple_id, reload, wakeKey])
+
+  async function refresh() {
+    try {
+      const { up, mo } = await reload()
+      setEvents(up); setMonthEvents(mo)
+    } catch { /* realtime will catch us up */ }
+  }
   async function onCreate(fields) {
-    const row = await createEvent(profile.couple_id, fields)
-    setEvents((prev) => insertSorted(prev, row))
-    setShowForm(false)
+    await createEvent(profile.couple_id, fields)
+    await refresh()
+    setShowForm(false); setFormDate(null)
   }
   async function onSaveEdit(id, fields) {
-    const row = await updateEvent(id, fields)
-    setEvents((prev) => insertSorted(prev.filter((e) => e.id !== id), row))
+    await updateEvent(id, fields)
+    await refresh()
     setEditing(null)
   }
   async function onDelete(id) {
     await deleteEvent(id)
-    setEvents((prev) => prev.filter((e) => e.id !== id))
+    await refresh()
     setEditing(null)
   }
 
+  function openAdd(dayKey = null) {
+    setFormDate(dayKey)
+    setEditing(null)
+    setShowForm(true)
+  }
+  function tapDay(key) {
+    setSelectedDay((cur) => (cur === key ? null : key))
+  }
+
+  const eventDays = useMemo(() => {
+    const s = new Set()
+    for (const e of monthEvents) s.add(dayKey(new Date(e.starts_at)))
+    return s
+  }, [monthEvents])
+
+  const dayEvents = useMemo(
+    () => (selectedDay ? monthEvents.filter((e) => dayKey(new Date(e.starts_at)) === selectedDay) : []),
+    [selectedDay, monthEvents],
+  )
+
   const grouped = useMemo(() => groupByDay(events), [events])
+
+  const rowProps = { meId: profile.id, partnerName, onEditId: setEditing }
 
   return (
     <div className="otter-scroll screen-enter">
       <header className="scr-head">
         <div className="htext">
           <h1>plans</h1>
-          <p className="sub">the things keeping us close</p>
+          <p className="sub">one calendar for the both of us</p>
         </div>
         <div className="spacer" />
         {!showForm && !editing && (
-          <button className="icon-btn" type="button" onClick={() => setShowForm(true)} aria-label="add plan">
+          <button className="icon-btn" type="button" onClick={() => openAdd(selectedDay)} aria-label="add plan">
             <Icon name="plus" size={20} stroke={2.4} />
           </button>
         )}
       </header>
 
+      <MonthGrid
+        month={month}
+        eventDays={eventDays}
+        selectedDay={selectedDay}
+        onPrev={() => { setMonth((m) => addMonths(m, -1)); setSelectedDay(null) }}
+        onNext={() => { setMonth((m) => addMonths(m, 1)); setSelectedDay(null) }}
+        onTapDay={tapDay}
+      />
+
       {showForm && (
-        <EventForm onCancel={() => setShowForm(false)} onSubmit={onCreate} />
+        <EventForm
+          initialDate={formDate}
+          onCancel={() => { setShowForm(false); setFormDate(null) }}
+          onSubmit={onCreate}
+        />
       )}
 
       {loading && <p className="hint">loading…</p>}
       {error && <p className="error">{error}</p>}
-      {!loading && !events.length && !showForm && (
+
+      {selectedDay && (
+        <>
+          <p className="cal-sec-title">{formatDayHeading(selectedDay)}</p>
+          {dayEvents.length === 0 && <p className="muted-note" style={{ textAlign: 'left', marginBottom: 12 }}>nothing planned this day.</p>}
+          <div className="cal-events" style={{ marginBottom: 16 }}>
+            {dayEvents.map((e) => (
+              editing === e.id
+                ? <EventForm key={e.id} initial={e} onCancel={() => setEditing(null)} onSubmit={(f) => onSaveEdit(e.id, f)} onDelete={() => onDelete(e.id)} />
+                : <EventRow key={e.id} event={e} {...rowProps} />
+            ))}
+          </div>
+          {!showForm && (
+            <button className="btn ghost full-row" type="button" onClick={() => openAdd(selectedDay)} style={{ marginBottom: 18 }}>
+              + add a plan this day
+            </button>
+          )}
+        </>
+      )}
+
+      {!loading && !events.length && !showForm && !selectedDay && (
         <div className="cal-empty">
           <p>nothing on the calendar yet.</p>
-          <button className="btn primary" type="button" onClick={() => setShowForm(true)}>add the first one</button>
+          <button className="btn primary" type="button" onClick={() => openAdd()}>add the first one</button>
         </div>
       )}
 
-      {grouped.map(({ key, dnum, dwk, items }) => (
+      {!selectedDay && grouped.length > 0 && <p className="cal-sec-title">coming up</p>}
+      {!selectedDay && grouped.map(({ key, dnum, dwk, items }) => (
         <section className="cal-day" key={key}>
           <div className="cal-date">
             <div className="dnum">{dnum}</div>
@@ -88,7 +189,7 @@ export default function Calendar({ profile, onOpenWatch }) {
                   onDelete={() => onDelete(e.id)}
                 />
               ) : (
-                <EventRow key={e.id} event={e} onEdit={() => setEditing(e.id)} />
+                <EventRow key={e.id} event={e} {...rowProps} />
               )
             ))}
           </div>
@@ -104,26 +205,68 @@ export default function Calendar({ profile, onOpenWatch }) {
   )
 }
 
-function EventRow({ event, onEdit }) {
-  const emoji = TYPE_EMOJI[event.type] ?? '•'
+function MonthGrid({ month, eventDays, selectedDay, onPrev, onNext, onTapDay }) {
+  const today = dayKey(new Date())
+  const cells = useMemo(() => buildMonthCells(month), [month])
   return (
-    <button className={`cal-row ${event.is_reunion ? 'reunion-row' : ''}`} type="button" onClick={onEdit}>
+    <section className="mcal" aria-label="month calendar">
+      <div className="mcal-head">
+        <button className="mcal-nav" type="button" onClick={onPrev} aria-label="previous month">
+          <Icon name="back" size={17} stroke={2.6} />
+        </button>
+        <p className="mcal-title">{MONTHS[month.getMonth()]} {month.getFullYear()}</p>
+        <button className="mcal-nav" type="button" onClick={onNext} aria-label="next month">
+          <Icon name="fwd" size={17} stroke={2.6} />
+        </button>
+      </div>
+      <div className="mcal-grid">
+        {DOW.map((d) => <div className="mcal-dow" key={d}>{d[0]}</div>)}
+        {cells.map((c, i) => c === null ? (
+          <button className="mcal-day" key={`pad-${i}`} type="button" disabled>·</button>
+        ) : (
+          <button
+            key={c.key}
+            type="button"
+            className={`mcal-day ${c.key === today ? 'today' : ''} ${c.key === selectedDay ? 'sel' : ''} ${c.past ? 'dim' : ''}`}
+            onClick={() => onTapDay(c.key)}
+            aria-label={c.key}
+          >
+            <span>{c.dnum}</span>
+            {eventDays.has(c.key) ? <span className="mcal-dot" /> : <span className="nodot" />}
+          </button>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function EventRow({ event, meId, partnerName, onEditId }) {
+  const emoji = TYPE_EMOJI[event.type] ?? '•'
+  const who = event.created_by === meId ? 'you' : (partnerName ?? 'them')
+  return (
+    <button className={`cal-row ${event.is_reunion ? 'reunion-row' : ''}`} type="button" onClick={() => onEditId(event.id)}>
       <div className="cal-ic">{emoji}</div>
       <div className="cal-info">
         <p className="cal-title">
           {event.title}
           {event.is_reunion && <span className="pill">reunion</span>}
         </p>
-        <p className="cal-time">{formatTime(event.starts_at)}{event.description ? ' · ' + event.description : ''}</p>
+        <p className="cal-time">
+          {formatTime(event.starts_at)}
+          {event.description ? ' · ' + event.description : ''}
+          {' · '}{who} added
+        </p>
       </div>
     </button>
   )
 }
 
-function EventForm({ initial, onSubmit, onCancel, onDelete }) {
+function EventForm({ initial, initialDate, onSubmit, onCancel, onDelete }) {
   const [title, setTitle] = useState(initial?.title ?? '')
   const [type, setType] = useState(initial?.type ?? 'date')
-  const [startsAt, setStartsAt] = useState(toLocalInput(initial?.starts_at))
+  const [startsAt, setStartsAt] = useState(
+    initial?.starts_at ? toLocalInput(initial.starts_at) : (initialDate ? `${initialDate}T18:00` : ''),
+  )
   const [endsAt, setEndsAt] = useState(toLocalInput(initial?.ends_at))
   const [isReunion, setIsReunion] = useState(!!initial?.is_reunion)
   const [description, setDescription] = useState(initial?.description ?? '')
@@ -189,6 +332,36 @@ function EventForm({ initial, onSubmit, onCancel, onDelete }) {
   )
 }
 
+// ───────── date helpers (all local-time; the grid is "your" calendar) ─────────
+
+function startOfMonth(d) {
+  return new Date(d.getFullYear(), d.getMonth(), 1)
+}
+function addMonths(d, n) {
+  return new Date(d.getFullYear(), d.getMonth() + n, 1)
+}
+function dayKey(d) {
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+// null = leading pad cell before the 1st.
+function buildMonthCells(month) {
+  const cells = []
+  for (let i = 0; i < month.getDay(); i++) cells.push(null)
+  const days = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate()
+  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
+  for (let d = 1; d <= days; d++) {
+    const date = new Date(month.getFullYear(), month.getMonth(), d)
+    cells.push({ key: dayKey(date), dnum: d, past: date < todayStart })
+  }
+  return cells
+}
+function formatDayHeading(key) {
+  const [y, m, d] = key.split('-').map(Number)
+  const date = new Date(y, m - 1, d)
+  return `${DOW[date.getDay()]} ${MONTHS[m - 1]} ${d}`
+}
+
 function groupByDay(events) {
   const out = []
   let cur = null
@@ -199,7 +372,7 @@ function groupByDay(events) {
       cur = {
         key,
         dnum: d.getDate(),
-        dwk: ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'][d.getDay()],
+        dwk: DOW[d.getDay()],
         items: [],
       }
       out.push(cur)
@@ -207,12 +380,6 @@ function groupByDay(events) {
     cur.items.push(e)
   }
   return out
-}
-
-function insertSorted(list, row) {
-  const next = [...list, row]
-  next.sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at))
-  return next
 }
 
 function formatTime(iso) {

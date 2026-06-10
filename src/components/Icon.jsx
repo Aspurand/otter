@@ -22,15 +22,6 @@ export default function Icon({ name, size = 23, stroke = 2 }) {
         <path d="M3.5 9h17M8 3v4M16 3v4" />
       </g>
     ),
-    play: (
-      <g {...p}>
-        <circle cx="12" cy="12" r="8.5" />
-        <circle cx="9"    cy="10" r="1.1" {...fillP} stroke="none" />
-        <circle cx="15"   cy="10" r="1.1" {...fillP} stroke="none" />
-        <circle cx="9.5"  cy="15" r="1.1" {...fillP} stroke="none" />
-        <circle cx="14.5" cy="15" r="1.1" {...fillP} stroke="none" />
-      </g>
-    ),
     gear: (
       <g {...p}>
         <circle cx="12" cy="12" r="3.2" />
@@ -39,6 +30,7 @@ export default function Icon({ name, size = 23, stroke = 2 }) {
     ),
     send:  <path {...fillP} d="M3.4 11.2 19.6 4c.7-.3 1.4.4 1.1 1.1l-7.2 16.2c-.3.7-1.3.6-1.5-.1l-1.6-5.6a1 1 0 0 0-.7-.7l-5.6-1.6c-.7-.2-.8-1.2-.1-1.5z" />,
     back:  <path {...p} d="M14 6l-6 6 6 6" />,
+    fwd:   <path {...p} d="M10 6l6 6-6 6" />,
     plus:  <path {...p} d="M12 5v14M5 12h14" />,
     play2: <path {...fillP} d="M8 5v14l11-7z" />,
     check: <path {...p} d="M5 12l5 5 9-10" />,

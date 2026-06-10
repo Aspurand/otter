@@ -14,7 +14,6 @@ import Home from './pages/Home.jsx'
 import Chat from './pages/Chat.jsx'
 import Calendar from './pages/Calendar.jsx'
 import Memories from './pages/Memories.jsx'
-import Games from './pages/Games.jsx'
 import Watch from './pages/Watch.jsx'
 import Brand from './components/Brand.jsx'
 import TabBar from './components/TabBar.jsx'
@@ -33,7 +32,7 @@ export default function App() {
   const [presence, setPresence] = useState({})
 
   // App-shell state
-  const [tab, setTab] = useState('home')                 // home | chat | us | plans | play
+  const [tab, setTab] = useState('home')                 // home | chat | us | plans
   const [overlay, setOverlay] = useState(null)           // null | 'watch'
   const [toasts, setToasts] = useState([])
   const [showSettings, setShowSettings] = useState(false)
@@ -405,8 +404,7 @@ export default function App() {
     switch (tab) {
       case 'chat':  return <Chat profile={profile} partner={partner} partnerName={partnerName} presence={presence} />
       case 'us':    return <Memories profile={profile} pushToast={pushToast} throwback={throwback} />
-      case 'plans': return <Calendar profile={profile} onOpenWatch={() => setOverlay('watch')} />
-      case 'play':  return <Games profile={profile} partner={partner} partnerName={partnerName} />
+      case 'plans': return <Calendar profile={profile} partnerName={partnerName} onOpenWatch={() => setOverlay('watch')} />
       case 'home':
       default:
         return (

@@ -1,4 +1,4 @@
-// Liquid-glass bottom tab bar. 5 tabs: home, chat, us (memories), plans (calendar), play (games).
+// Liquid-glass bottom tab bar. 4 tabs: home, chat, us (memories), plans (shared calendar).
 
 import Icon from './Icon.jsx'
 
@@ -7,7 +7,6 @@ const TABS = [
   { key: 'chat',  label: 'chat',  icon: 'chat' },
   { key: 'us',    label: 'us',    icon: 'photos' },
   { key: 'plans', label: 'plans', icon: 'cal' },
-  { key: 'play',  label: 'play',  icon: 'play' },
 ]
 
 export default function TabBar({ current, onChange, chatUnread = 0, usHasNew = false }) {

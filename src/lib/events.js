@@ -52,6 +52,21 @@ export async function fetchUpcoming(coupleId, { limit = 100 } = {}) {
   return data ?? []
 }
 
+// Every event inside [fromIso, toIso) — feeds the month-grid dots, so it
+// includes past days of the displayed month (unlike fetchUpcoming).
+export async function fetchRange(coupleId, fromIso, toIso) {
+  if (!coupleId) return []
+  const { data, error } = await db.select('events', {
+    match: { couple_id: coupleId },
+    gte: { starts_at: fromIso },
+    lt: { starts_at: toIso },
+    order: { column: 'starts_at', ascending: true },
+    limit: 200,
+  })
+  if (error) throw error
+  return data ?? []
+}
+
 export async function fetchPast(coupleId, { limit = 50 } = {}) {
   if (!coupleId) return []
   const cutoff = new Date(Date.now() - 24 * 3_600_000).toISOString()
