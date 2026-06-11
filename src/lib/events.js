@@ -10,9 +10,16 @@ export const EVENT_TYPES = [
   { key: 'anniversary', label: 'anniversary' },
 ]
 
-// Implicit reunion duration when ends_at isn't set — used to know when an
-// undated reunion should be considered "over" so we can advance to the next.
-const REUNION_GRACE_MS = 24 * 60 * 60 * 1000
+// Implicit event duration when ends_at isn't set — used to know when an
+// open-ended event should be considered "over" (drop it from the upcoming
+// list / advance the reunion countdown to the next one).
+const EVENT_GRACE_MS = 24 * 60 * 60 * 1000
+
+// When an event is effectively over: its ends_at if set, else starts_at + grace.
+export function eventEndMs(e) {
+  if (e.ends_at) return new Date(e.ends_at).getTime()
+  return new Date(e.starts_at).getTime() + EVENT_GRACE_MS
+}
 
 // The next reunion the countdown should show — either upcoming OR currently
 // happening (started but not yet ended). Server filter is lenient (events
@@ -31,17 +38,19 @@ export async function fetchNextReunion(coupleId) {
   const now = Date.now()
   const rows = data ?? []
   for (const ev of rows) {
-    const startsAt = new Date(ev.starts_at).getTime()
-    const endsAt = ev.ends_at ? new Date(ev.ends_at).getTime() : startsAt + REUNION_GRACE_MS
-    if (endsAt > now) return ev
+    if (eventEndMs(ev) > now) return ev
   }
   return null
 }
 
-// Future events (and currently happening), oldest -> newest.
+// Future events (and currently happening), oldest -> newest. An event drops
+// off once it's over: past its ends_at, or — when no end is set — 24h after
+// it starts. The server filter is lenient (last 30 days) so long multi-day
+// events that are still running aren't cut off; the client filters by
+// effective end.
 export async function fetchUpcoming(coupleId, { limit = 100 } = {}) {
   if (!coupleId) return []
-  const cutoff = new Date(Date.now() - 24 * 3_600_000).toISOString() // include today
+  const cutoff = new Date(Date.now() - 30 * 24 * 3_600_000).toISOString()
   const { data, error } = await db.select('events', {
     match: { couple_id: coupleId },
     gt: { starts_at: cutoff },
@@ -49,7 +58,8 @@ export async function fetchUpcoming(coupleId, { limit = 100 } = {}) {
     limit,
   })
   if (error) throw error
-  return data ?? []
+  const now = Date.now()
+  return (data ?? []).filter((e) => eventEndMs(e) > now)
 }
 
 // Every event inside [fromIso, toIso) — feeds the month-grid dots, so it

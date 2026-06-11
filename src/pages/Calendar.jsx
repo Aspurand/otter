@@ -5,6 +5,7 @@ import {
   createEvent,
   updateEvent,
   deleteEvent,
+  eventEndMs,
   EVENT_TYPES,
 } from '../lib/events.js'
 import { supabase } from '../lib/supabase.js'
@@ -26,6 +27,14 @@ export default function Calendar({ profile, partnerName, onOpenWatch }) {
   const [showForm, setShowForm] = useState(false)
   const [formDate, setFormDate] = useState(null)     // prefill when adding from a tapped day
   const [editing, setEditing] = useState(null)
+  const [nowTick, setNowTick] = useState(() => Date.now())
+
+  // Tick once a minute so finished plans (past their end time) drop off the
+  // upcoming list while the app sits open, without waiting for a refetch.
+  useEffect(() => {
+    const t = setInterval(() => setNowTick(Date.now()), 60_000)
+    return () => clearInterval(t)
+  }, [])
 
   const reload = useCallback(async () => {
     const next = addMonths(month, 1)
@@ -106,7 +115,10 @@ export default function Calendar({ profile, partnerName, onOpenWatch }) {
     [selectedDay, monthEvents],
   )
 
-  const grouped = useMemo(() => groupByDay(events), [events])
+  // fetchUpcoming already filters once at fetch time; re-filter against the
+  // ticking clock so events vanish the minute they're over.
+  const liveEvents = useMemo(() => events.filter((e) => eventEndMs(e) > nowTick), [events, nowTick])
+  const grouped = useMemo(() => groupByDay(liveEvents), [liveEvents])
 
   const rowProps = { meId: profile.id, partnerName, onEditId: setEditing }
 
@@ -164,7 +176,7 @@ export default function Calendar({ profile, partnerName, onOpenWatch }) {
         </>
       )}
 
-      {!loading && !events.length && !showForm && !selectedDay && (
+      {!loading && !liveEvents.length && !showForm && !selectedDay && (
         <div className="cal-empty">
           <p>nothing on the calendar yet.</p>
           <button className="btn primary" type="button" onClick={() => openAdd()}>add the first one</button>
