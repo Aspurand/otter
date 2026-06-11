@@ -6,6 +6,16 @@ import { sendNudge } from '../lib/nudges.js'
 import LoveNoteSheet from './LoveNoteSheet.jsx'
 import Icon from './Icon.jsx'
 
+// Cute little confirmations, one at random per tap.
+const SENT_MESSAGES = [
+  'sent with love',
+  'flying their way',
+  'straight from the heart',
+  'one heartbeat closer',
+  'a little love ping',
+  'love, delivered',
+]
+
 export default function NudgeButton({ profile, partner, partnerName = 'them', pushToast, triggerLoveMood }) {
   const [sending, setSending] = useState(false)
   const [pulsing, setPulsing] = useState(false)
@@ -19,9 +29,10 @@ export default function NudgeButton({ profile, partner, partnerName = 'them', pu
     triggerLoveMood?.()
     try {
       await sendNudge(profile.couple_id)
+      const msg = SENT_MESSAGES[Math.floor(Math.random() * SENT_MESSAGES.length)]
       pushToast?.({
-        emoji: '♥',
-        title: 'sent ♥',
+        emoji: '🤍',
+        title: `${msg} 🤍`,
         body: `${partnerName} will feel the buzz`,
       })
     } catch (e) {
